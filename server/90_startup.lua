@@ -196,10 +196,10 @@ CreateThread(function()
     -- Name ourselves before logging anything. nxc_lib's modules run inside this
     -- resource's own Lua state, so without this every line below claims to come
     -- from nxc_lib.
-    exports["NXC.Logger.setResource"](NxcCore.RESOURCE)
-    exports["NXC.Logger.setLevel"](settings.nxc_log_level)
-    exports["NXC.Logger.setEnvironment"](settings.nxc_environment)
-    exports["NXC.Logger.info"]('startup.environment_valid', {
+    exports['nxc_lib']["NXC.Logger.setResource"](NxcCore.RESOURCE)
+    exports['nxc_lib']["NXC.Logger.setLevel"](settings.nxc_log_level)
+    exports['nxc_lib']["NXC.Logger.setEnvironment"](settings.nxc_environment)
+    exports['nxc_lib']["NXC.Logger.info"]('startup.environment_valid', {
         environment = settings.nxc_environment,
         serverBuild = settings.nxc_server_build,
         startupMode = settings.nxc_startup_mode,
