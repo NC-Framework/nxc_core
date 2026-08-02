@@ -186,27 +186,58 @@ CreateThread(function()
 
     ------------------------------------------------------- 0. library contract
     -- Every resource loads its OWN copy of nxc_lib, so the copy running inside
-    -- nxc_core is whatever was on disk when nxc_core was last deployed. Nothing
+    -- nxc_core is whichever was on disk when nxc_core was last deployed. Nothing
     -- keeps two resources on the same version.
     --
-    -- Checked here, first, because the alternative is what actually happened on
-    -- a real server: `attempt to call a nil value (field 'setResource')`, at
-    -- whatever line first reached a function the older copy did not have. That
-    -- names a symptom, in the wrong resource, at an arbitrary place.
-    local REQUIRED_LIB_CONTRACT = 1
-    if type(Nxc) ~= 'table' or not Nxc.CONTRACT_VERSION then
-        return halt('nxc_lib is missing, or too old to identify itself.', {
-            message = 'nxc_core requires nxc_lib contract v' .. REQUIRED_LIB_CONTRACT
-                   .. '. The installed copy declares no contract version, which means it predates '
-                   .. 'this check. Update nxc_lib.',
-        })
+    -- THIS IS A SAFETY NET, NOT THE MECHANISM. What prevents mismatched versions
+    -- is installing a compatibility set — one verified bundle — rather than
+    -- individual resources. An operator should never meet this message. When
+    -- they do, it means the set was broken by hand, so the message has to be
+    -- actionable by someone who did not write any of this.
+    --
+    -- BOUNDED AT BOTH ENDS. A minimum alone is wrong: CONTRACT_VERSION is
+    -- incremented on INCOMPATIBLE change, so a newer nxc_lib is not
+    -- automatically safer — contract 2 would satisfy `>= 1` and then break at
+    -- whatever it removed.
+    local LIB_CONTRACT_MIN, LIB_CONTRACT_MAX = 1, 1
+
+    local function versionAdvice(problem, detail)
+        return {
+            message = problem,
+            details = {
+                reason = detail .. '\n'
+                    .. '\n  Nexus Core resources are released together as a compatibility set:'
+                    .. '\n  a bundle of versions verified against each other. Installing or'
+                    .. '\n  updating one resource on its own is what produces this.'
+                    .. '\n'
+                    .. '\n  To fix it, reinstall the set rather than chasing individual'
+                    .. '\n  resources. Run `nxc_versions` in this console to see what you have.',
+            },
+        }
     end
-    if Nxc.CONTRACT_VERSION < REQUIRED_LIB_CONTRACT then
-        return halt('nxc_lib is too old for this version of nxc_core.', {
-            message = ('nxc_core requires nxc_lib contract v%d; the installed copy is v%d '
-                    .. '(nxc_lib v%s). Update nxc_lib, or install a matching nxc_core.')
-                :format(REQUIRED_LIB_CONTRACT, Nxc.CONTRACT_VERSION, tostring(Nxc.VERSION)),
-        })
+
+    if type(Nxc) ~= 'table' or not Nxc.CONTRACT_VERSION then
+        return halt('nxc_lib is missing, or too old to identify itself.', versionAdvice(
+            'nxc_core needs nxc_lib, and cannot find a usable one.',
+            ('  installed nxc_lib   %s\n  required contract  v%d')
+                :format(type(Nxc) == 'table' and tostring(Nxc.VERSION) or 'not installed',
+                        LIB_CONTRACT_MIN)))
+    end
+
+    if Nxc.CONTRACT_VERSION < LIB_CONTRACT_MIN then
+        return halt('nxc_lib is older than this nxc_core supports.', versionAdvice(
+            'UPDATE NXC_LIB. It is the resource that is behind.',
+            ('  installed nxc_lib   v%s  (contract v%d)\n  this nxc_core       v%s  (needs contract v%d)')
+                :format(tostring(Nxc.VERSION), Nxc.CONTRACT_VERSION,
+                        NxcCore.VERSION, LIB_CONTRACT_MIN)))
+    end
+
+    if Nxc.CONTRACT_VERSION > LIB_CONTRACT_MAX then
+        return halt('nxc_core is older than the installed nxc_lib.', versionAdvice(
+            'UPDATE NXC_CORE. This time it is nxc_core that is behind, not the library.',
+            ('  installed nxc_lib   v%s  (contract v%d)\n  this nxc_core       v%s  (supports up to contract v%d)')
+                :format(tostring(Nxc.VERSION), Nxc.CONTRACT_VERSION,
+                        NxcCore.VERSION, LIB_CONTRACT_MAX)))
     end
 
     ------------------------------------------------------------------ 1. environment
@@ -306,6 +337,43 @@ RegisterCommand('nxc_status', function(source)
     for key, value in pairs(NxcCore.Config.snapshot()) do
         print(('    %-38s %s'):format(key, tostring(value)))
     end
+end, true)
+
+--- `nxc_versions` — what is actually installed.
+---
+--- The first question in any support conversation, and one an operator cannot
+--- currently answer without opening files. Every Nexus resource declares
+--- `nxc_platform` in its manifest, which makes them enumerable.
+---
+--- Console only, like `nxc_status`.
+RegisterCommand('nxc_versions', function(source)
+    if source ~= 0 then return end
+
+    print('^5[nxc_core]^7 installed Nexus Core resources:')
+    print(('  %-18s %-10s %-16s %s'):format('RESOURCE', 'VERSION', 'MIN SERVER BUILD', 'STATE'))
+
+    local found = 0
+    for i = 0, GetNumResources() - 1 do
+        local name = GetResourceByFindIndex(i)
+        if name and GetResourceMetadata(name, 'nxc_platform', 0) then
+            found = found + 1
+            print(('  %-18s %-10s %-16s %s'):format(
+                name,
+                GetResourceMetadata(name, 'version', 0) or '?',
+                GetResourceMetadata(name, 'nxc_min_server_build', 0) or '?',
+                GetResourceState(name)))
+        end
+    end
+
+    if found == 0 then
+        print('  none found, which should be impossible from inside one of them')
+    end
+
+    print(('  nxc_lib contract    v%s'):format(tostring(Nxc.CONTRACT_VERSION)))
+    print(('  nxc_core contract   v%d'):format(NxcCore.CONTRACT_VERSION))
+    print('')
+    print('  These are released together as a compatibility set. If they did not all')
+    print('  come from the same one, that is worth fixing before anything else.')
 end, true)
 
 NxcCore.Startup = Startup
