@@ -165,20 +165,31 @@ end
 --- them; it executes no SQL.
 ---
 ---@return table
-function Persistence.inMemoryDouble()
+function Persistence.inMemoryDouble(opts)
+    opts = opts or {}
     local calls = { query = {}, execute = {}, transaction = {} }
+
+    -- `onQuery` and `onTransaction` let a test answer, not merely record.
+    --
+    -- The recording-only version could prove which statements were sent and
+    -- nothing about what happens when rows come back — so account resolution,
+    -- which is entirely about reacting to rows, had no test worth the name and
+    -- shipped broken.
     return {
         calls = calls,
         query = function(sql, params)
             calls.query[#calls.query + 1] = { sql = sql, params = params }
+            if opts.onQuery then return opts.onQuery(sql, params) or {} end
             return {}
         end,
         execute = function(sql, params)
             calls.execute[#calls.execute + 1] = { sql = sql, params = params }
+            if opts.onExecute then return opts.onExecute(sql, params) end
             return 1
         end,
         transaction = function(statements)
             calls.transaction[#calls.transaction + 1] = statements
+            if opts.onTransaction then return opts.onTransaction(statements) end
             return true
         end,
     }

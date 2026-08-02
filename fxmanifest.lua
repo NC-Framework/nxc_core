@@ -75,6 +75,7 @@ shared_scripts {
     'shared/config_schema.lua',
     'shared/config.lua',
     'shared/platform_identity.lua',
+    'shared/accounts.lua',
 }
 
 files {
@@ -84,7 +85,6 @@ files {
 server_scripts {
     'server/mariadb_provider.lua',
     'server/migrator.lua',
-    'server/accounts.lua',
     'server/connection.lua',
     'server/startup.lua',
 }

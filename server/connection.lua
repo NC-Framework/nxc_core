@@ -25,6 +25,10 @@ local function reject(deferrals, err, correlationId)
         correlationId = correlationId,
         code = err.code,
         rejection = err.details and err.details.rejection,
+        -- The reason, not just the code. A rejection logged as
+        -- NXC_CORE_ACCOUNT_RESOLUTION_FAILED and nothing else names the category
+        -- and withholds the cause, which cost a round trip to discover once.
+        reason = err.details and err.details.reason,
     })
     deferrals.done(err.message)
 end
