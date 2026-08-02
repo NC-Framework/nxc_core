@@ -1,4 +1,4 @@
-# `nexus_core`
+# `nxc_core`
 
 The Nexus Core framework spine: lifecycle, identity, sessions, permissions, shared state, and service discovery.
 
