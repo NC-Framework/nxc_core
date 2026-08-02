@@ -103,7 +103,7 @@ describe('Config schema', () => {
     `);
     assert.equal(r.ok, true);
     assert.equal(r.resource, 'nxc_core');
-    assert.equal(r.count, 6);
+    assert.equal(r.count, 7);
   });
 
   test('a refused or throwing registrar returns an error, not a crash', async () => {

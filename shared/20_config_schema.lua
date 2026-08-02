@@ -129,6 +129,24 @@ ConfigSchema.FIELDS = {
         changeEvent = 'nxc_core:server:migrationPolicyChanged',
     },
     {
+        key = 'nxc_core.startup.banner',
+        type = 'boolean',
+        description = 'Whether the Nexus Core banner is printed to the server console at startup.',
+        default = true,
+        validation = {},
+        scope = { 'global', 'environment' },
+        clientVisible = false,
+        editCapability = 'config.resource.edit',
+        auditClassification = 'operational',
+        sensitive = false,
+        -- Printed once, during startup. Changing it later cannot un-print
+        -- anything, and claiming otherwise in the admin panel would be a lie.
+        reloadBehavior = 'Resource Restart Required',
+        migrationBehavior = 'retain',
+        rollbackBehavior = 'restore',
+        changeEvent = 'nxc_core:server:startupPolicyChanged',
+    },
+    {
         key = 'nxc_core.logging.level',
         type = 'string',
         description =

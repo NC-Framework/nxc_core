@@ -30,6 +30,39 @@ function Startup.isReady() return ready end
 ---@return table|nil
 function Startup.failure() return failure end
 
+--- The startup banner.
+---
+--- Plain ASCII on purpose. Box-drawing and block characters look better and
+--- depend on the console's encoding; a banner that renders as replacement
+--- characters is worse than no banner, and this is the one thing an operator
+--- sees before anything else works.
+---
+--- Printed before validation, so it appears whether the server starts or not.
+local BANNER = {
+    '  ##   ## ###### ##   ## ##   ##  #####      #####  #####  ######  ######',
+    '  ###  ## ##      ## ##  ##   ## ##         ##     ##   ## ##   ## ##',
+    '  ## # ## #####    ###   ##   ##  ####      ##     ##   ## ######  #####',
+    '  ##  ### ##      ## ##  ##   ##     ##     ##     ##   ## ##  ##  ##',
+    '  ##   ## ###### ##   ##  #####  #####       #####  #####  ##   ## ######',
+}
+
+--- Print the banner, unless the operator has turned it off.
+---
+--- Configurable because Nexus Core is a distributable framework (ADR-0018), and
+--- an operator running someone else's framework may reasonably not want its logo
+--- in their console every restart.
+local function printBanner()
+    if not NxcCore.Config.get('nxc_core.startup.banner') then return end
+
+    print('')
+    for _, line in ipairs(BANNER) do
+        print('^4' .. line .. '^7')
+    end
+    print(('^7  %s  v%s   contract v%d   %s^7')
+        :format(('-'):rep(18), NxcCore.VERSION, NxcCore.CONTRACT_VERSION, ('-'):rep(18)))
+    print('')
+end
+
 --- Stop the framework with an explanation an operator can act on.
 local function halt(headline, err)
     ready = false
@@ -58,6 +91,8 @@ CreateThread(function()
     -- established asynchronously and may not be ready in the same tick.
     Wait(0)
 
+    printBanner()
+
     ------------------------------------------------------------------ 1. environment
     local env = NxcCore.Bootstrap.validate(function(name, default)
         return GetConvar(name, default or '')
@@ -67,6 +102,10 @@ CreateThread(function()
     end
     local settings = env.value
 
+    -- Name ourselves before logging anything. nxc_lib's modules run inside this
+    -- resource's own Lua state, so without this every line below claims to come
+    -- from nxc_lib.
+    Nxc.Logger.setResource(NxcCore.RESOURCE)
     Nxc.Logger.setLevel(settings.nxc_log_level)
     Nxc.Logger.setEnvironment(settings.nxc_environment)
     Nxc.Logger.info('startup.environment_valid', {

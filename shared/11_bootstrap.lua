@@ -192,9 +192,24 @@ end
 ---@param err NxcError
 ---@return string
 function Bootstrap.explain(err)
-    local lines = { 'Nexus Core cannot start. The following must be corrected in server.cfg:' }
+    local lines = { 'Nexus Core cannot start. The following must be corrected in server.cfg:', '' }
+    local anyMissing = false
     for _, p in ipairs((err.details and err.details.fields) or {}) do
         lines[#lines + 1] = ('  %-28s %s'):format(p.field, p.reason)
+        if p.reason:find('is required and is not set') then anyMissing = true end
+    end
+
+    -- The most common cause of "set, but the server disagrees", and one the
+    -- framework cannot see: server.cfg runs top to bottom and the LAST `set`
+    -- wins, so a blank line further down silently overrides a filled-in one
+    -- above it. GetConvar returns only the resolved value, so this is invisible
+    -- from here and has to be guessed at in the message instead.
+    if anyMissing then
+        lines[#lines + 1] = ''
+        lines[#lines + 1] = '  If you believe one of these IS set, check for a SECOND `set` of the'
+        lines[#lines + 1] = '  same name further down server.cfg. The file runs top to bottom and the'
+        lines[#lines + 1] = '  last one wins, so a blank line below silently overrides your value.'
+        lines[#lines + 1] = '  Re-running the deployment recipe is a common way to acquire one.'
     end
     return table.concat(lines, '\n')
 end

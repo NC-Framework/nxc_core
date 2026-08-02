@@ -33,7 +33,13 @@ local function readDeclared()
     return files, nil
 end
 
---- Rows already recorded as applied.
+--- Rows already recorded as applied, FOR THIS RESOURCE ONLY.
+---
+--- `nxc_migrations` is shared by every resource that migrates — that is why it
+--- carries a `resource` column and a unique key on (resource, migration). Reading
+--- the whole table would mean nxc_core treating another resource's migrations as
+--- its own: their filenames would look applied-ahead, and a filename both
+--- resources happened to use would look like checksum drift and refuse to start.
 ---
 --- Reads the bootstrap table the deployment recipe creates. Its absence is a
 --- deployment fault rather than a migration fault, and is reported as such —
@@ -43,7 +49,9 @@ end
 ---@return table[]|nil, string|nil
 local function readApplied(db)
     local ok, rows = pcall(function()
-        return db.query(('SELECT migration, checksum FROM `%s` ORDER BY id'):format(TABLE))
+        return db.query(
+            ('SELECT migration, checksum FROM `%s` WHERE resource = ? ORDER BY id'):format(TABLE),
+            { RESOURCE })
     end)
     if not ok then
         return nil, ('cannot read `%s`: %s. The deployment recipe creates this table; '):format(
@@ -155,8 +163,9 @@ function Migrator.run(db)
         -- migration must remain pending, or the next run would skip it and
         -- every later migration would apply against a schema nobody described.
         local recorded, recordErr = pcall(function()
-            db.execute(('INSERT INTO `%s` (migration, checksum) VALUES (?, ?)'):format(TABLE),
-                { migration.filename, migration.checksum })
+            db.execute(
+                ('INSERT INTO `%s` (resource, migration, checksum) VALUES (?, ?, ?)'):format(TABLE),
+                { RESOURCE, migration.filename, migration.checksum })
         end)
         if not recorded then
             return Nxc.Result.err(Nxc.Errors.new(
