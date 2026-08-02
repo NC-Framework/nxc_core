@@ -184,14 +184,30 @@ end
 
 --- Whether an account may hold another character.
 ---
---- Slot count is operational configuration, so it is passed in rather than
---- read here.
+--- Slot count is operational configuration. It may be passed in explicitly —
+--- a test does, and so would a per-account override such as a donor tier — and
+--- otherwise comes from the configured value.
 ---
 ---@param currentCount integer
 ---@param maxSlots integer|nil
 ---@return boolean
 function Sessions.canCreateCharacter(currentCount, maxSlots)
-    return currentCount < (maxSlots or Sessions.MAX_CHARACTERS_DEFAULT)
+    return currentCount < (maxSlots or Sessions.configuredMaxCharacters())
+end
+
+--- The configured character limit.
+---
+--- Read through the configuration holder rather than from the constant, so an
+--- operator raising the limit in game takes effect on the next creation attempt.
+--- The constant remains the declared fallback for the window before
+--- configuration is available.
+---
+---@return integer
+function Sessions.configuredMaxCharacters()
+    if NxcCore.Config then
+        return NxcCore.Config.get('nxc_core.characters.maxPerAccount')
+    end
+    return Sessions.MAX_CHARACTERS_DEFAULT
 end
 
 ---@return integer

@@ -49,12 +49,29 @@ local TRANSITIONS = {
 
 --- Whether a transition is permitted.
 ---
+--- Two things can forbid a transition, and they are different in kind. The
+--- transition table says what is structurally possible — a violation there is a
+--- bug. Configuration says what this server currently permits — a violation
+--- there is an operator's decision. Both answer false here; the caller
+--- distinguishes them through the rejection reason.
+---
 ---@param from string
 ---@param to string
 ---@return boolean
 function Lifecycle.canTransition(from, to)
     local allowed = TRANSITIONS[from]
-    return allowed ~= nil and allowed[to] == true
+    if allowed == nil or allowed[to] ~= true then return false end
+
+    -- The live character switch. With it disabled, a switch requires a
+    -- reconnect, so playing -> selecting is refused while every other route out
+    -- of playing stays open.
+    if from == Lifecycle.STAGE.PLAYING and to == Lifecycle.STAGE.SELECTING then
+        if NxcCore.Config and NxcCore.Config.get('nxc_core.characters.allowLiveSwitch') ~= true then
+            return false
+        end
+    end
+
+    return true
 end
 
 --- Advance a lifecycle state.
@@ -149,7 +166,13 @@ end
 ---@return { newSession: boolean, restoreCharacter: boolean, characterId: string|nil, reason: string }
 function Lifecycle.planReconnect(opts)
     local nowMs = opts.nowMs or Nxc.Time.nowMs()
-    local grace = opts.graceMs or (5 * 60 * 1000)
+    -- Configured rather than fixed: how long a disconnected player keeps their
+    -- character is a server's own judgement about crash recovery versus abuse.
+    local grace = opts.graceMs
+    if grace == nil and NxcCore.Config then
+        grace = NxcCore.Config.get('nxc_core.session.reconnectGraceMs')
+    end
+    grace = grace or (5 * 60 * 1000)
 
     -- Always a new session. Never a resurrected one.
     local plan = { newSession = true, restoreCharacter = false, characterId = nil }

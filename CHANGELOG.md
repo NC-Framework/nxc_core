@@ -25,9 +25,14 @@ capability resolution.
   stop, and on disconnect sweep.
 - A persistence provider interface that refuses cross-domain queries, including
   inside transactions, with an in-memory double for tests.
-- 83 tests across 9 suites.
+- 114 tests across 13 suites.
 - A performance budget and a threat model.
 - Migration planning with content checksums, drift detection, and ordering.
+- A configuration schema and runtime holder. Character limit, live character
+  switching, reconnect grace, whitelist requirement, migration application, and
+  log level are edited in game rather than in a file. Every setting has a value
+  before nxc_config exists, an unknown key raises instead of returning nil, and a
+  rejected edit leaves the running value in place.
 - The first real migration: accounts, account identifiers, characters, and
   capability grants. Verified against MariaDB 12.3 — applies cleanly, cascades
   correctly, enforces its unique constraint, re-applies idempotently, and
