@@ -1,13 +1,13 @@
-import { test, describe, before, after } from 'node:test';
+import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createEngine, withFrozenClock } from './harness.mjs';
 
 let lua;
-before(async () => {
+beforeEach(async () => {
   lua = await createEngine();
   await withFrozenClock(lua, 1700000000000);
 });
-after(() => lua.global.close());
+afterEach(() => lua.global.close());
 
 // A convar getter backed by a table, so bootstrap validation is testable
 // without the FiveM runtime.
@@ -33,7 +33,7 @@ const CONVARS = `
 `;
 
 describe('Bootstrap', () => {
-  before(async () => { await lua.doString(CONVARS); });
+  beforeEach(async () => { await lua.doString(CONVARS); });
 
   test('a complete environment validates', async () => {
     const r = await lua.doString(`
