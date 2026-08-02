@@ -1,6 +1,6 @@
 --- Runtime configuration values for `nxc_core`.
 ---
---- The schema in `20_config_schema.lua` declares what is configurable. This
+--- The schema in `config_schema.lua` declares what is configurable. This
 --- module holds what the values currently ARE, and is what framework code reads.
 ---
 --- Three properties matter:

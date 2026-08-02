@@ -36,7 +36,8 @@ version '0.1.0'
 -- resource's own modules, exactly as they load inside nxc_lib.
 --
 -- Enumerated rather than globbed so that adding a module to nxc_lib is a
--- deliberate act here too. check-manifests.mjs fails if this list drifts from
+-- deliberate act here too, and because load order is dependency order rather
+-- than alphabetical. check-manifests.mjs fails if this list drifts from
 -- nxc_lib's shared directory.
 --
 -- Each resource gets its OWN COPY of nxc_lib's state. Rate-limit buckets, logger
@@ -44,23 +45,36 @@ version '0.1.0'
 -- nxc_lib's own. That is correct for primitives, which are pure; anything needing
 -- genuinely shared state must cross the boundary through an export instead.
 shared_scripts {
-    '@nxc_lib/shared/00_namespace.lua',
-    '@nxc_lib/shared/10_result.lua',
-    '@nxc_lib/shared/11_errors.lua',
-    '@nxc_lib/shared/12_correlation.lua',
-    '@nxc_lib/shared/13_time.lua',
-    '@nxc_lib/shared/14_serialize.lua',
-    '@nxc_lib/shared/20_validate.lua',
-    '@nxc_lib/shared/21_envelope.lua',
-    '@nxc_lib/shared/22_ratelimit.lua',
-    '@nxc_lib/shared/23_cancel.lua',
-    '@nxc_lib/shared/30_logger.lua',
-    '@nxc_lib/shared/31_locale.lua',
-    '@nxc_lib/shared/32_permissions.lua',
-    '@nxc_lib/shared/33_health.lua',
-    '@nxc_lib/shared/34_config_schema.lua',
+    '@nxc_lib/shared/namespace.lua',
+    '@nxc_lib/shared/result.lua',
+    '@nxc_lib/shared/errors.lua',
+    '@nxc_lib/shared/correlation.lua',
+    '@nxc_lib/shared/time.lua',
+    '@nxc_lib/shared/serialize.lua',
+    '@nxc_lib/shared/validate.lua',
+    '@nxc_lib/shared/envelope.lua',
+    '@nxc_lib/shared/ratelimit.lua',
+    '@nxc_lib/shared/cancel.lua',
+    '@nxc_lib/shared/logger.lua',
+    '@nxc_lib/shared/locale.lua',
+    '@nxc_lib/shared/permissions.lua',
+    '@nxc_lib/shared/health.lua',
+    '@nxc_lib/shared/config_schema.lua',
 
-    'shared/*.lua',
+    'shared/namespace.lua',
+    'shared/identifiers.lua',
+    'shared/bootstrap.lua',
+    'shared/services.lua',
+    'shared/sessions.lua',
+    'shared/capabilities.lua',
+    'shared/statebags.lua',
+    'shared/lifecycle.lua',
+    'shared/buckets.lua',
+    'shared/persistence.lua',
+    'shared/migrations.lua',
+    'shared/config_schema.lua',
+    'shared/config.lua',
+    'shared/platform_identity.lua',
 }
 
 files {
@@ -68,7 +82,11 @@ files {
 }
 
 server_scripts {
-    'server/*.lua',
+    'server/mariadb_provider.lua',
+    'server/migrator.lua',
+    'server/accounts.lua',
+    'server/connection.lua',
+    'server/startup.lua',
 }
 
 -- Migrations are ENUMERATED, not discovered. A resource cannot list its own

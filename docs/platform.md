@@ -17,10 +17,10 @@ Confined to four server files. Everything in `shared/` remains pure Lua and runs
 
 | Where | Uses |
 | --- | --- |
-| `server/90_startup.lua` | `IsDuplicityVersion`, `CreateThread`, `Wait`, `GetConvar`, `RegisterCommand`, `TriggerEvent` |
-| `server/40_connection.lua` | `AddEventHandler` for `playerConnecting`, `playerJoining`, `playerDropped`; the `deferrals` object (`defer`, `update`, `done`); `GetNumPlayerIdentifiers`, `GetPlayerIdentifier`, `Player(source).state`, `DropPlayer` |
-| `server/20_migrator.lua` | `GetNumResourceMetadata`, `GetResourceMetadata`, `LoadResourceFile` |
-| `server/10_mariadb_provider.lua` | `exports.oxmysql` |
+| `server/startup.lua` | `IsDuplicityVersion`, `CreateThread`, `Wait`, `GetConvar`, `RegisterCommand`, `TriggerEvent` |
+| `server/connection.lua` | `AddEventHandler` for `playerConnecting`, `playerJoining`, `playerDropped`; the `deferrals` object (`defer`, `update`, `done`); `GetNumPlayerIdentifiers`, `GetPlayerIdentifier`, `Player(source).state`, `DropPlayer` |
+| `server/migrator.lua` | `GetNumResourceMetadata`, `GetResourceMetadata`, `LoadResourceFile` |
+| `server/mariadb_provider.lua` | `exports.oxmysql` |
 
 **Deferrals carry the one timing requirement.** The platform needs a tick between `defer()` and any later deferral call, so there is an explicit `Wait(0)`. Without it the handshake fails in a way that looks like a network problem.
 
@@ -38,11 +38,11 @@ Specifically no Mumble voice natives: this resource does no voice, and `nxc_voic
 
 ### 4. Voice, networking, state bag, entity, and routing bucket assumptions
 
-**State bags:** `15_statebags.lua` defines the policy — every bag is client-visible, so registration refuses keys naming money, items, capabilities, or tokens. It defines the policy; it does not set bags.
+**State bags:** `statebags.lua` defines the policy — every bag is client-visible, so registration refuses keys naming money, items, capabilities, or tokens. It defines the policy; it does not set bags.
 
-**Routing buckets:** `17_buckets.lua` owns allocation for the whole framework. Bucket 0 is the shared world, 1 through 999 are reserved, and 1000 through 99999 are allocated dynamically. Resources request a bucket and are given an id; they never pick one. These ranges are a framework convention, not a platform limit.
+**Routing buckets:** `buckets.lua` owns allocation for the whole framework. Bucket 0 is the shared world, 1 through 999 are reserved, and 1000 through 99999 are allocated dynamically. Resources request a bucket and are given an id; they never pick one. These ranges are a framework convention, not a platform limit.
 
-**Networking:** `16_lifecycle.lua` is a stage machine over connection states and assumes nothing about the transport. The deferral and handshake layer in front of it now exists, in `server/40_connection.lua`, written against the Enhanced flow: `defer`, a tick, `update`, then `done` with either success or a reason the player can act on (R-1620).
+**Networking:** `lifecycle.lua` is a stage machine over connection states and assumes nothing about the transport. The deferral and handshake layer in front of it now exists, in `server/connection.lua`, written against the Enhanced flow: `defer`, a tick, `update`, then `done` with either success or a reason the player can act on (R-1620).
 
 **Correlation:** an id is issued at the first `playerConnecting` event and carried into the session, so one connection is one traceable story from handshake to disconnect (R-1621).
 

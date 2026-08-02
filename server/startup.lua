@@ -184,6 +184,31 @@ CreateThread(function()
 
     printBanner()
 
+    ------------------------------------------------------- 0. library contract
+    -- Every resource loads its OWN copy of nxc_lib, so the copy running inside
+    -- nxc_core is whatever was on disk when nxc_core was last deployed. Nothing
+    -- keeps two resources on the same version.
+    --
+    -- Checked here, first, because the alternative is what actually happened on
+    -- a real server: `attempt to call a nil value (field 'setResource')`, at
+    -- whatever line first reached a function the older copy did not have. That
+    -- names a symptom, in the wrong resource, at an arbitrary place.
+    local REQUIRED_LIB_CONTRACT = 1
+    if type(Nxc) ~= 'table' or not Nxc.CONTRACT_VERSION then
+        return halt('nxc_lib is missing, or too old to identify itself.', {
+            message = 'nxc_core requires nxc_lib contract v' .. REQUIRED_LIB_CONTRACT
+                   .. '. The installed copy declares no contract version, which means it predates '
+                   .. 'this check. Update nxc_lib.',
+        })
+    end
+    if Nxc.CONTRACT_VERSION < REQUIRED_LIB_CONTRACT then
+        return halt('nxc_lib is too old for this version of nxc_core.', {
+            message = ('nxc_core requires nxc_lib contract v%d; the installed copy is v%d '
+                    .. '(nxc_lib v%s). Update nxc_lib, or install a matching nxc_core.')
+                :format(REQUIRED_LIB_CONTRACT, Nxc.CONTRACT_VERSION, tostring(Nxc.VERSION)),
+        })
+    end
+
     ------------------------------------------------------------------ 1. environment
     local env = NxcCore.Bootstrap.validate(function(name, default)
         return GetConvar(name, default or '')
@@ -196,10 +221,10 @@ CreateThread(function()
     -- Name ourselves before logging anything. nxc_lib's modules run inside this
     -- resource's own Lua state, so without this every line below claims to come
     -- from nxc_lib.
-    exports['nxc_lib']["NXC.Logger.setResource"](NxcCore.RESOURCE)
-    exports['nxc_lib']["NXC.Logger.setLevel"](settings.nxc_log_level)
-    exports['nxc_lib']["NXC.Logger.setEnvironment"](settings.nxc_environment)
-    exports['nxc_lib']["NXC.Logger.info"]('startup.environment_valid', {
+    Nxc.Logger.setResource(NxcCore.RESOURCE)
+    Nxc.Logger.setLevel(settings.nxc_log_level)
+    Nxc.Logger.setEnvironment(settings.nxc_environment)
+    Nxc.Logger.info('startup.environment_valid', {
         environment = settings.nxc_environment,
         serverBuild = settings.nxc_server_build,
         startupMode = settings.nxc_startup_mode,
@@ -216,8 +241,7 @@ CreateThread(function()
 
     NxcCore.Persistence.setProvider(NxcCore.MariaDBProvider)
     NxcCore.Accounts.setProvider(NxcCore.Persistence.scoped(NxcCore.RESOURCE))
-    exports("NXC.Logger.info")('startup.database_reachable', {})
-    exports("NXC.Logger.info")('startup.database_ready', {})
+    Nxc.Logger.info('startup.database_ready', {})
 
     ------------------------------------------------------------------ 3. migrations
     if NxcCore.Config.get('nxc_core.migrations.applyOnStart') then
@@ -226,13 +250,13 @@ CreateThread(function()
             return halt('A database migration failed.', migrated.error)
         end
         if #migrated.value.applied > 0 then
-            exports("NXC.Logger.info")('startup.migrations_applied', {
+            Nxc.Logger.info('startup.migrations_applied', {
                 count = #migrated.value.applied,
                 migrations = migrated.value.applied,
             })
         end
     else
-        exports("NXC.Logger.warn")('startup.migrations_skipped', {
+        Nxc.Logger.warn('startup.migrations_skipped', {
             detail = 'nxc_core.migrations.applyOnStart is false; the schema may be behind',
         })
     end
@@ -249,7 +273,7 @@ CreateThread(function()
     ready = true
     failure = nil
 
-    exports("NXC.Logger.info")('startup.ready', {
+    Nxc.Logger.info('startup.ready', {
         version = NxcCore.VERSION,
         contractVersion = NxcCore.CONTRACT_VERSION,
         serverBuild = settings.nxc_server_build,

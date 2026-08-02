@@ -1,6 +1,6 @@
 --- Platform identifiers presented by a connecting player.
 ---
---- Distinct from `10_identifiers.lua`, which mints Nexus Core's own identifiers.
+--- Distinct from `identifiers.lua`, which mints Nexus Core's own identifiers.
 --- These are what FiveM hands us — `license:abc`, `discord:123`, `steam:110…` —
 --- and they are the only evidence available at connection time about who a
 --- player is.

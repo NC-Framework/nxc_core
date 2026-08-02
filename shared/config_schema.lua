@@ -5,7 +5,7 @@
 --- That is a condition of acceptance, not a quality goal.
 ---
 --- **What belongs here is the mirror image of what belongs in bootstrap.**
---- `11_bootstrap.lua` holds values an operator could not safely change on a
+--- `bootstrap.lua` holds values an operator could not safely change on a
 --- running server: the database connection, the environment identity, the token
 --- signing key. Everything an operator *could* safely change while players are
 --- connected belongs here and is edited in game.

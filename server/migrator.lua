@@ -1,7 +1,7 @@
 --- Applies pending migrations at startup.
 ---
 --- The planning — ordering, checksums, drift detection — is in
---- `shared/19_migrations.lua` and is fully tested. This file is the part that
+--- `shared/migrations.lua` and is fully tested. This file is the part that
 --- cannot be: reading files from the resource and talking to a database.
 ---
 --- **Migrations are enumerated in `fxmanifest.lua`, not discovered.** A resource
