@@ -27,3 +27,10 @@ capability resolution.
   inside transactions, with an in-memory double for tests.
 - 83 tests across 9 suites.
 - A performance budget and a threat model.
+- Migration planning with content checksums, drift detection, and ordering.
+- The first real migration: accounts, account identifiers, characters, and
+  capability grants. Verified against MariaDB 12.3 — applies cleanly, cascades
+  correctly, enforces its unique constraint, re-applies idempotently, and
+  reverses fully.
+- A MariaDB persistence provider backed by oxmysql.
+- 93 tests across 10 suites.

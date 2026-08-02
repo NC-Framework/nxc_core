@@ -13,8 +13,12 @@ files {
     'locales/*.json',
 }
 
--- No client or server blocks yet: the implemented modules are all shared pure
--- logic. Blocks are added when those directories gain files.
+server_scripts {
+    'server/*.lua',
+}
+
+-- No client block yet: nothing client-side is implemented. It is added when
+-- the client directory gains files.
 
 dependencies {
     'nxc_lib',
