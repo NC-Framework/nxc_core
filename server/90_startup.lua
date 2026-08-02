@@ -196,11 +196,10 @@ CreateThread(function()
     -- Name ourselves before logging anything. nxc_lib's modules run inside this
     -- resource's own Lua state, so without this every line below claims to come
     -- from nxc_lib.
-    
-    Nxc.Logger.setResource(NxcCore.RESOURCE)
-    Nxc.Logger.setLevel(settings.nxc_log_level)
-    Nxc.Logger.setEnvironment(settings.nxc_environment)
-    Nxc.Logger.info('startup.environment_valid', {
+    exports["NXC.Logger.setResource"](NxcCore.RESOURCE)
+    exports["NXC.Logger.setLevel"](settings.nxc_log_level)
+    exports["NXC.Logger.setEnvironment"](settings.nxc_environment)
+    exports["NXC.Logger.info"]('startup.environment_valid', {
         environment = settings.nxc_environment,
         serverBuild = settings.nxc_server_build,
         startupMode = settings.nxc_startup_mode,
@@ -217,7 +216,8 @@ CreateThread(function()
 
     NxcCore.Persistence.setProvider(NxcCore.MariaDBProvider)
     NxcCore.Accounts.setProvider(NxcCore.Persistence.scoped(NxcCore.RESOURCE))
-    Nxc.Logger.info('startup.database_ready', {})
+    exports("NXC.Logger.info")('startup.database_reachable', {})
+    exports("NXC.Logger.info")('startup.database_ready', {})
 
     ------------------------------------------------------------------ 3. migrations
     if NxcCore.Config.get('nxc_core.migrations.applyOnStart') then
@@ -226,13 +226,13 @@ CreateThread(function()
             return halt('A database migration failed.', migrated.error)
         end
         if #migrated.value.applied > 0 then
-            Nxc.Logger.info('startup.migrations_applied', {
+            exports("NXC.Logger.info")('startup.migrations_applied', {
                 count = #migrated.value.applied,
                 migrations = migrated.value.applied,
             })
         end
     else
-        Nxc.Logger.warn('startup.migrations_skipped', {
+        exports("NXC.Logger.warn")('startup.migrations_skipped', {
             detail = 'nxc_core.migrations.applyOnStart is false; the schema may be behind',
         })
     end
@@ -249,7 +249,7 @@ CreateThread(function()
     ready = true
     failure = nil
 
-    Nxc.Logger.info('startup.ready', {
+    exports("NXC.Logger.info")('startup.ready', {
         version = NxcCore.VERSION,
         contractVersion = NxcCore.CONTRACT_VERSION,
         serverBuild = settings.nxc_server_build,
