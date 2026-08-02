@@ -25,7 +25,10 @@ capability resolution.
   stop, and on disconnect sweep.
 - A persistence provider interface that refuses cross-domain queries, including
   inside transactions, with an in-memory double for tests.
-- 114 tests across 13 suites.
+- A required `nxc_server_build` bootstrap value. Every deployment records the exact
+  Cfx Server build it runs, so a platform regression can be attributed to a specific
+  update rather than to whatever changed most recently.
+- 116 tests across 13 suites.
 - A performance budget and a threat model.
 - Migration planning with content checksums, drift detection, and ordering.
 - A configuration schema and runtime holder. Character limit, live character

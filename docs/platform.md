@@ -44,6 +44,15 @@ The database provider is deliberately thin for this reason: it cannot be unit te
 **Not pinned.** No build has been named — OD-020, blocker B-11. The manifest declares `UNPINNED`, which
 fails `check-manifests.mjs` deliberately rather than passing with a plausible-looking number.
 
+**The deployed build is recorded even though the minimum is not pinned.** `nxc_server_build` is a
+required bootstrap value: the server refuses to start until the operator records the exact Cfx Server
+build it runs (MDD v0.4 38.2). These are different things — a minimum is a compatibility claim, and a
+recorded build is a fact about one deployment. The second is available now; the first needs a decision.
+
+Bootstrap does **not** check whether the recorded build is an Enhanced build. A build number does not
+carry its edition, and inventing a range to test against would be a fabricated fact that fails closed on
+correct input. Proving the server is Enhanced is gate check P1-E02, on real hardware.
+
 ### 7. Asset conversion or validation requirements
 
 **None.**

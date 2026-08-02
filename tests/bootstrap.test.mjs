@@ -23,6 +23,7 @@ const CONVARS = `
     mysql_connection_string = 'mysql://nexus:s3cret@127.0.0.1/nexus?charset=utf8mb4',
     nxc_environment = 'development',
     nxc_token_signing_key = string.rep('k', 48),
+    nxc_server_build = '12345',
   }
   function withOverrides(o)
     local t = {}
@@ -106,6 +107,43 @@ describe('Bootstrap', () => {
     `);
     assert.equal(r.ok, false);
     assert.match(r.reason, /at least 32/);
+  });
+
+  test('an unrecorded server build is a startup failure', async () => {
+    const r = await lua.doString(`
+      local missing = NxcCore.Bootstrap.validate(
+        makeGetter(withOverrides({ nxc_server_build = '__nil__' })))
+      local placeholder = NxcCore.Bootstrap.validate(
+        makeGetter(withOverrides({ nxc_server_build = 'UNPINNED' })))
+      local prose = NxcCore.Bootstrap.validate(
+        makeGetter(withOverrides({ nxc_server_build = 'latest' })))
+      return {
+        missing = missing.ok, missingReason = missing.error.details.fields[1].reason,
+        placeholder = placeholder.ok,
+        placeholderReason = placeholder.error.details.fields[1].reason,
+        prose = prose.ok, proseReason = prose.error.details.fields[1].reason,
+      }
+    `);
+    assert.equal(r.missing, false, 'a regression must be attributable to a specific build');
+    assert.match(r.missingReason, /is required/);
+    assert.equal(r.placeholder, false);
+    assert.match(r.placeholderReason, /still a placeholder/);
+    assert.equal(r.prose, false);
+    assert.match(r.proseReason, /not a description/);
+  });
+
+  test('the server build is not checked for its edition', async () => {
+    const r = await lua.doString(`
+      local out = NxcCore.Bootstrap.validate(
+        makeGetter(withOverrides({ nxc_server_build = '3095' })))
+      return { ok = out.ok, recorded = out.value and out.value.nxc_server_build }
+    `);
+    // 3095 is a Legacy build, and bootstrap accepts it. A build number does not
+    // carry its edition, so inventing a range to test against would fail closed
+    // on correct input. Recording the build is the requirement here; proving the
+    // server is Enhanced is gate check P1-E02, on real hardware.
+    assert.equal(r.ok, true);
+    assert.equal(r.recorded, '3095');
   });
 
   test('development mode in production is a startup failure', async () => {

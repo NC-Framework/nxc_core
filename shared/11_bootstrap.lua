@@ -56,6 +56,32 @@ Bootstrap.REQUIRED = {
             return true
         end,
     },
+    {
+        convar = 'nxc_server_build',
+        description = 'The exact Cfx Server build this deployment runs. Set in server.cfg.',
+        secret = false,
+        -- Required by MDD v0.4 section 38.2: every deployment records its build,
+        -- so a platform regression can be attributed to a specific update rather
+        -- than to whatever changed most recently. Enhanced is early access, so
+        -- this is a matter of when.
+        --
+        -- Required rather than optional. A value that is optional is a value
+        -- that is empty on the one server where it matters.
+        validate = function(v)
+            if v:match('^<.*>$') or v == 'UNPINNED' then
+                return false, 'is still a placeholder; the operator has not filled it in'
+            end
+            -- WHAT THIS DOES NOT CHECK: whether the build is an Enhanced build.
+            -- A build number does not carry its edition, and inventing a range
+            -- to test against would be a fabricated fact that fails closed on
+            -- correct input. Recording the build is the requirement; verifying
+            -- the edition is the operator's, and P1-E02's.
+            if not v:match('%d') then
+                return false, 'must contain the server build, not a description'
+            end
+            return true
+        end,
+    },
 }
 
 Bootstrap.OPTIONAL = {
