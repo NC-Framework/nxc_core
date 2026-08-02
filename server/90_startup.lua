@@ -196,6 +196,7 @@ CreateThread(function()
     -- Name ourselves before logging anything. nxc_lib's modules run inside this
     -- resource's own Lua state, so without this every line below claims to come
     -- from nxc_lib.
+    print(NxcCore.RESOURCE)
     
     local success, result = pcall(
         Nxc.Logger.setResource(NxcCore.RESOURCE)
