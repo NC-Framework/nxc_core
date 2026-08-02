@@ -7,6 +7,14 @@ Entries are added only for genuinely user-visible or contract-relevant changes.
 Initial foundation: startup lifecycle, identity, sessions, service discovery, and
 capability resolution.
 
+### Fixed
+
+- **`nxc_core` could not start on a server.** It referenced `Nxc`, `nxc_lib`'s global,
+  without loading `nxc_lib` into its own Lua state. Every FiveM resource has its own state,
+  so declaring `nxc_lib` as a dependency ordered startup and shared no code at all. The
+  resource deployed, reported as started, and died on the first line touching `Nxc`. The
+  manifest now loads all fifteen `nxc_lib` modules through `@nxc_lib/shared/...`.
+
 ### Added
 
 - Environment bootstrap validation that fails with a structured error naming every

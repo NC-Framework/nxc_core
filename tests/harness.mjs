@@ -6,9 +6,19 @@
  * there is no GetPlayerPed and no TriggerClientEvent. Any logic entangled with a
  * native is untestable here and belongs in a separate module.
  *
- * Files load in filename order, which is the same order `shared_scripts` globs
- * them in the manifest. A module that depends on one loaded later would fail
- * here for the same reason it would fail on a server.
+ * THE LOAD ORDER COMES FROM `fxmanifest.lua`, NOT FROM THIS FILE.
+ *
+ * It used to be hardcoded here: nxc_lib's shared directory, then nxc_core's. That
+ * looked like it mirrored the server and did not. Every FiveM resource gets its
+ * own Lua state, so a global set by nxc_lib is invisible inside nxc_core unless
+ * nxc_lib's files are loaded INTO nxc_core through `@nxc_lib/...` manifest
+ * entries. The harness supplied that sharing for free, so 116 tests passed
+ * against a resource that could not start on a real server — it died on the first
+ * line touching `Nxc`.
+ *
+ * Reading the manifest means the tests exercise the same declaration the server
+ * does. Delete an `@nxc_lib` entry and the suite fails here instead of on
+ * deployment.
  *
  * ONE ENGINE PER TEST, NOT PER FILE. wasmoon 1.16.0 leaks on every `doString`,
  * and an engine stops working after roughly sixty of them: Lua starts reporting
@@ -30,11 +40,47 @@ import { LuaFactory } from 'wasmoon';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-// nxc_core depends on nxc_lib, which is a sibling checkout. Loading nxc_lib
-// first mirrors the server, where it starts before nxc_core.
-const libShared = resolve(here, '..', '..', 'nxc_lib', 'shared');
-const coreShared = resolve(here, '..', 'shared');
-const sharedDirs = [libShared, coreShared];
+const resourceRoot = resolve(here, '..');
+const workspace = resolve(resourceRoot, '..');
+
+/**
+ * Expand one `shared_scripts` entry into absolute file paths.
+ *
+ * `@other_resource/path` resolves into the sibling checkout, which is what the
+ * server does with another resource's files. A bare path resolves locally. Both
+ * support a `*` glob in the final segment.
+ */
+function expand(entry) {
+  let base = resourceRoot;
+  let rel = entry;
+
+  const external = entry.match(/^@([\w-]+)\/(.+)$/);
+  if (external) {
+    // nxc_lib is checked out as `nxc_lib`; nxc_core's directory is still
+    // `nexus_core` from before the rename, so map by resource name, not folder.
+    base = resolve(workspace, external[1]);
+    rel = external[2];
+  }
+
+  const slash = rel.lastIndexOf('/');
+  const dir = resolve(base, slash === -1 ? '' : rel.slice(0, slash));
+  const leaf = slash === -1 ? rel : rel.slice(slash + 1);
+
+  if (!leaf.includes('*')) return [join(dir, leaf)];
+
+  const re = new RegExp('^' + leaf.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
+  return readdirSync(dir).filter((f) => re.test(f)).sort().map((f) => join(dir, f));
+}
+
+/** Every shared script this resource declares, in declared order. */
+function declaredSharedScripts() {
+  const manifest = readFileSync(join(resourceRoot, 'fxmanifest.lua'), 'utf8');
+  const block = manifest.match(/shared_scripts\s*\{([\s\S]*?)\n\}/);
+  if (!block) throw new Error('fxmanifest.lua declares no shared_scripts block');
+  const entries = [...block[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  if (!entries.length) throw new Error('shared_scripts block is empty');
+  return entries.flatMap(expand);
+}
 
 /**
  * Create an engine with every shared module loaded.
@@ -46,15 +92,12 @@ export async function createEngine() {
   const factory = new LuaFactory();
   const lua = await factory.createEngine();
 
-  for (const dir of sharedDirs) {
-    const files = readdirSync(dir).filter((f) => f.endsWith('.lua')).sort();
-    for (const file of files) {
-      const source = readFileSync(join(dir, file), 'utf8');
-      try {
-        await lua.doString(source);
-      } catch (err) {
-        throw new Error(`failed loading ${dir}/${file}: ${err.message}`);
-      }
+  for (const file of declaredSharedScripts()) {
+    const source = readFileSync(file, 'utf8');
+    try {
+      await lua.doString(source);
+    } catch (err) {
+      throw new Error(`failed loading ${file}: ${err.message}`);
     }
   }
 
