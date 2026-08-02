@@ -9,17 +9,12 @@ shared_scripts {
     'shared/*.lua',
 }
 
-client_scripts {
-    'client/*.lua',
-}
-
-server_scripts {
-    'server/*.lua',
-}
-
 files {
     'locales/*.json',
 }
+
+-- No client or server blocks yet: the implemented modules are all shared pure
+-- logic. Blocks are added when those directories gain files.
 
 dependencies {
     'nxc_lib',

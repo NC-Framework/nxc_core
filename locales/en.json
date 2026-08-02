@@ -1,0 +1,10 @@
+{
+  "connection.rejected.noIdentifier": "Your account could not be identified.",
+  "connection.rejected.banned": "You are banned from this server.",
+  "connection.rejected.notWhitelisted": "This server is whitelisted.",
+  "connection.rejected.serverFull": "The server is full.",
+  "connection.rejected.bootstrapFailed": "The server is not accepting connections.",
+  "session.invalid": "Your session is no longer valid.",
+  "character.selectDenied": "That character is not available.",
+  "bootstrap.cannotStart": "The server is not configured correctly and cannot start."
+}
