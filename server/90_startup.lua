@@ -150,7 +150,7 @@ local function printBanner()
         print('^4' .. line .. '^7')
     end
     print(('^7  %s  v%s   contract v%d   %s^7')
-        :format(('-'):rep(18), NxcCore.VERSION, NxcCore.CONTRACT_VERSION, ('-'):rep(18)))
+        :format(('-'):rep(25), NxcCore.VERSION, NxcCore.CONTRACT_VERSION, ('-'):rep(25)))
     print('')
 end
 
