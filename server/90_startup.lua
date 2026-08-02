@@ -199,8 +199,26 @@ CreateThread(function()
     
     local success, result = pcall(
         Nxc.Logger.setResource(NxcCore.RESOURCE)
+    )
+    if not success then
+        return halt('Failed to set the resource name for logging.', result)
+    end
+
+    local success, result = pcall(
         Nxc.Logger.setLevel(settings.nxc_log_level)
+    )
+    if not success then
+        return halt('Failed to set logging level.', result)
+    end
+
+    local success, result = pcall(
         Nxc.Logger.setEnvironment(settings.nxc_environment)
+    )
+    if not success then
+        return halt('Failed to set the environment for logging.', result)
+    end
+
+    local success, result = pcall(
         Nxc.Logger.info('startup.environment_valid', {
             environment = settings.nxc_environment,
             serverBuild = settings.nxc_server_build,
@@ -208,7 +226,7 @@ CreateThread(function()
         })
     )
     if not success then
-        return halt('Failed to set the resource name for logging.', result)
+        return halt('Failed to set the environment for logging.', result)
     end
 
     ------------------------------------------------------------------ 2. database
