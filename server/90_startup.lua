@@ -196,39 +196,15 @@ CreateThread(function()
     -- Name ourselves before logging anything. nxc_lib's modules run inside this
     -- resource's own Lua state, so without this every line below claims to come
     -- from nxc_lib.
-    print(NxcCore.RESOURCE)
     
-    local success, result = pcall(
-        Nxc.Logger.setResource(NxcCore.RESOURCE)
-    )
-    if not success then
-        return halt('Failed to set the resource name for logging.', result)
-    end
-
-    local success, result = pcall(
-        Nxc.Logger.setLevel(settings.nxc_log_level)
-    )
-    if not success then
-        return halt('Failed to set logging level.', result)
-    end
-
-    local success, result = pcall(
-        Nxc.Logger.setEnvironment(settings.nxc_environment)
-    )
-    if not success then
-        return halt('Failed to set the environment for logging.', result)
-    end
-
-    local success, result = pcall(
-        Nxc.Logger.info('startup.environment_valid', {
-            environment = settings.nxc_environment,
-            serverBuild = settings.nxc_server_build,
-            startupMode = settings.nxc_startup_mode,
-        })
-    )
-    if not success then
-        return halt('Failed to set the environment for logging.', result)
-    end
+    Nxc.Logger.setResource(NxcCore.RESOURCE)
+    Nxc.Logger.setLevel(settings.nxc_log_level)
+    Nxc.Logger.setEnvironment(settings.nxc_environment)
+    Nxc.Logger.info('startup.environment_valid', {
+        environment = settings.nxc_environment,
+        serverBuild = settings.nxc_server_build,
+        startupMode = settings.nxc_startup_mode,
+    })
 
     ------------------------------------------------------------------ 2. database
     local reachable, pingErr = NxcCore.MariaDBProvider.ping()
