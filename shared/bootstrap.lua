@@ -46,17 +46,6 @@ Bootstrap.REQUIRED = {
         end,
     },
     {
-        convar = 'nxc_token_signing_key',
-        description = 'Signing key for session and NUI tokens. Unique per environment.',
-        secret = true,
-        validate = function(v)
-            if #v < 32 then
-                return false, 'must be at least 32 characters'
-            end
-            return true
-        end,
-    },
-    {
         convar = 'nxc_server_build',
         description = 'The exact Cfx Server build this deployment runs. Set in server.cfg.',
         secret = false,
@@ -85,6 +74,23 @@ Bootstrap.REQUIRED = {
 }
 
 Bootstrap.OPTIONAL = {
+    {
+        -- OPTIONAL BY DESIGN (OD-005). The signing key is generated at startup
+        -- and rotated by restarting, so an operator supplies nothing.
+        --
+        -- It moved out of REQUIRED after a real deployment failure: the recipe
+        -- ships this line blank, an operator filled it in, a later redeploy wrote
+        -- a second blank `set` below theirs, and the last one won. A value nobody
+        -- has to set cannot be set wrongly.
+        --
+        -- Still accepted, for the case generation does not cover: more than one
+        -- server instance sharing sessions. Validated by `shared/tokens.lua`,
+        -- which refuses a short one rather than silently generating instead.
+        convar = 'nxc_token_signing_key',
+        default = '',
+        secret = true,
+        validate = function() return true end,
+    },
     {
         convar = 'nxc_startup_mode',
         default = 'normal',
@@ -152,6 +158,13 @@ function Bootstrap.validate(getConvar)
         local ok, reason = spec.validate(value)
         if not ok then
             problems[#problems + 1] = { field = spec.convar, reason = reason }
+        elseif spec.secret then
+            -- An OPTIONAL value can still be a secret, and settings are logged
+            -- and reported by the health surface. Recording presence rather than
+            -- value is the same rule the required list follows; omitting it here
+            -- would have leaked an operator-supplied signing key into the log the
+            -- moment anyone set one.
+            settings[spec.convar] = (value ~= '' and value ~= nil)
         else
             settings[spec.convar] = value
         end

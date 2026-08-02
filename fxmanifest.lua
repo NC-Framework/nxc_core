@@ -76,6 +76,7 @@ shared_scripts {
     'shared/config.lua',
     'shared/platform_identity.lua',
     'shared/accounts.lua',
+    'shared/tokens.lua',
 }
 
 files {

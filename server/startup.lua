@@ -274,6 +274,19 @@ CreateThread(function()
     NxcCore.Accounts.setProvider(NxcCore.Persistence.scoped(NxcCore.RESOURCE))
     Nxc.Logger.info('startup.database_ready', {})
 
+    -------------------------------------------------------- 2b. signing key
+    -- After the database, because the entropy comes from it.
+    local decided = NxcCore.Tokens.decide(
+        GetConvar('nxc_token_signing_key', ''),
+        function() return NxcCore.MariaDBProvider.randomHex(32) end)
+    if not decided.ok then
+        return halt('The token signing key could not be established.', decided.error)
+    end
+    NxcCore.Tokens.install(decided.value.key, decided.value.source)
+
+    -- The SOURCE is logged. The key never is, at any level, in any environment.
+    Nxc.Logger.info('startup.signing_key_ready', { source = decided.value.source })
+
     ------------------------------------------------------------------ 3. migrations
     if NxcCore.Config.get('nxc_core.migrations.applyOnStart') then
         local migrated = NxcCore.Migrator.run(NxcCore.MariaDBProvider)
@@ -332,6 +345,8 @@ RegisterCommand('nxc_status', function(source)
     print(('  version           %s (contract v%d)'):format(NxcCore.VERSION, NxcCore.CONTRACT_VERSION))
     print(('  sessions open     %d'):format(NxcCore.Sessions.count()))
     print(('  persistence       %s'):format(NxcCore.Persistence.isReady() and 'ready' or 'unavailable'))
+    print(('  signing key       %s'):format(
+        NxcCore.Tokens.isReady() and (NxcCore.Tokens.source() .. ', rotates on restart') or 'not set'))
     print(('  buckets allocated %d'):format(NxcCore.Buckets.count()))
     print('  configuration:')
     for key, value in pairs(NxcCore.Config.snapshot()) do

@@ -73,5 +73,32 @@ function Provider.ping()
     return true, nil
 end
 
+--- Cryptographically secure random bytes, as hex.
+---
+--- **From the database engine, not from Lua.** `math.random` is a PRNG seeded
+--- from the clock and an address; it is fine for identifiers and unfit for a
+--- signing key, because anyone who can guess the key can forge a session token.
+---
+--- MariaDB's RANDOM_BYTES draws from the same CSPRNG the server uses for TLS.
+--- Using it costs nothing here: the database is already a hard dependency and
+--- startup already waits for it.
+---
+--- Returns nil and a reason if the function is unavailable — it needs MariaDB
+--- 10.10 or later, or MySQL 8.0 — so the caller can refuse to start rather than
+--- quietly fall back to something weaker.
+---
+---@param bytes integer
+---@return string|nil hex, string|nil reason
+function Provider.randomHex(bytes)
+    local ok, result = pcall(function()
+        return oxmysql():scalar_async('SELECT HEX(RANDOM_BYTES(?))', { bytes })
+    end)
+    if not ok or type(result) ~= 'string' or #result < bytes * 2 then
+        return nil, 'RANDOM_BYTES is unavailable on this database server '
+            .. '(needs MariaDB 10.10+ or MySQL 8.0+): ' .. tostring(result)
+    end
+    return result, nil
+end
+
 NxcCore.MariaDBProvider = Provider
 return Provider

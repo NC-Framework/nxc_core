@@ -22,7 +22,6 @@ const CONVARS = `
   VALID = {
     mysql_connection_string = 'mysql://nexus:s3cret@127.0.0.1/nexus?charset=utf8mb4',
     nxc_environment = 'development',
-    nxc_token_signing_key = string.rep('k', 48),
     nxc_server_build = '12345',
   }
   function withOverrides(o)
@@ -51,14 +50,20 @@ describe('Bootstrap', () => {
 
   test('a secret is recorded as present, never by value', async () => {
     const r = await lua.doString(`
-      local out = NxcCore.Bootstrap.validate(makeGetter(VALID))
+      local absent = NxcCore.Bootstrap.validate(makeGetter(VALID))
+      local supplied = NxcCore.Bootstrap.validate(
+        makeGetter(withOverrides({ nxc_token_signing_key = string.rep('k', 48) })))
       return {
-        connection = out.value.mysql_connection_string,
-        key = out.value.nxc_token_signing_key,
+        connection = absent.value.mysql_connection_string,
+        keyAbsent = absent.value.nxc_token_signing_key,
+        keySupplied = supplied.value.nxc_token_signing_key,
       }
     `);
     assert.equal(r.connection, true, 'settings are logged and surfaced in health reports');
-    assert.equal(r.key, true);
+    assert.equal(r.keyAbsent, false, 'no operator key: generated at startup instead');
+    // An OPTIONAL secret is still a secret. Recording the value here would put an
+    // operator-supplied signing key straight into the log.
+    assert.equal(r.keySupplied, true);
   });
 
   test('a missing required value fails with a structured error', async () => {
@@ -80,7 +85,7 @@ describe('Bootstrap', () => {
       local out = NxcCore.Bootstrap.validate(makeGetter(withOverrides({
         mysql_connection_string = '',
         nxc_environment = 'banana',
-        nxc_token_signing_key = 'short',
+        nxc_server_build = '',
       })))
       return { ok = out.ok, count = #out.error.details.fields }
     `);
@@ -99,14 +104,15 @@ describe('Bootstrap', () => {
     assert.match(r.reason, /placeholder/);
   });
 
-  test('a short signing key is rejected', async () => {
+  test('the signing key is no longer required at bootstrap', async () => {
     const r = await lua.doString(`
       local out = NxcCore.Bootstrap.validate(
-        makeGetter(withOverrides({ nxc_token_signing_key = 'tooshort' })))
-      return { ok = out.ok, reason = out.error.details.fields[1].reason }
+        makeGetter(withOverrides({ nxc_token_signing_key = '__nil__' })))
+      return out.ok
     `);
-    assert.equal(r.ok, false);
-    assert.match(r.reason, /at least 32/);
+    // OD-005: generated at startup, rotated by restarting. A value nobody has to
+    // set cannot be set wrongly — which is how a blank one reached a server.
+    assert.equal(r, true);
   });
 
   test('an unrecorded server build is a startup failure', async () => {
