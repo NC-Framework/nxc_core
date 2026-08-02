@@ -24,7 +24,11 @@ local accountsBySession = {} -- sessionId -> source
 --- A session is created at connection and holds no character until one is
 --- selected. `activeCharacterId` being nil is a normal state, not an error.
 ---
----@param opts { source: any, accountId: string, identifiers?: table, bucket?: integer }
+--- `correlationId` may be supplied to continue the connection's own id into the
+--- session. A connection and the session it produces are one story, and issuing
+--- a fresh id here would break the trail at exactly the point someone follows it.
+---
+---@param opts { source: any, accountId: string, identifiers?: table, bucket?: integer, correlationId?: string }
 ---@return NxcResult
 function Sessions.create(opts)
     if type(opts) ~= 'table' then
@@ -51,7 +55,7 @@ function Sessions.create(opts)
         activeCharacterId = nil,
         identifiers = opts.identifiers or {},
         bucket = opts.bucket or 0,
-        correlationId = Nxc.Correlation.new(),
+        correlationId = opts.correlationId or Nxc.Correlation.new(),
         createdAt = Nxc.Time.nowMs(),
     }
     sessions[opts.source] = session

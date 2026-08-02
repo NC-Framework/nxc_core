@@ -9,6 +9,12 @@ capability resolution.
 
 ### Fixed
 
+- **`nxc_core` had no entry point.** It loaded twenty-eight modules of tested logic and
+  ran none of it: bootstrap validation never executed, the persistence provider was never
+  installed, and migrations never applied. The resource reported `Started` and did nothing,
+  which is the failure mode hardest to notice because there is no error to read.
+
+
 - **`nxc_core` could not start on a server.** It referenced `Nxc`, `nxc_lib`'s global,
   without loading `nxc_lib` into its own Lua state. Every FiveM resource has its own state,
   so declaring `nxc_lib` as a dependency ordered startup and shared no code at all. The
@@ -16,6 +22,23 @@ capability resolution.
   manifest now loads all fifteen `nxc_lib` modules through `@nxc_lib/shared/...`.
 
 ### Added
+
+- A server entry point: validate the environment, reach the database, apply migrations,
+  register the service, then open for connections. A failure at any step stops the
+  framework with an explanation rather than degrading into a server that looks healthy and
+  fails on the first player action.
+- Connection lifecycle wired to the Enhanced deferral flow — identifiers resolved to an
+  account, ban and whitelist evaluated, session created on join, cleanup driven from the
+  drop event because a crashed client never runs a clean exit path.
+- `nxc_core_accounts` find-or-create, made safe under concurrency by the unique constraint
+  on (kind, value) rather than by an application check with a race in it.
+- Platform identifier parsing, with `ip` deliberately excluded: an address is shared by a
+  household and reassigned by a provider, so treating one as identity both merges strangers
+  and separates the same person.
+- An `nxc_status` console command reporting readiness, sessions, persistence, buckets, and
+  effective configuration.
+- 128 tests across 15 suites.
+
 
 - Environment bootstrap validation that fails with a structured error naming every
   problem, not just the first.
@@ -36,7 +59,6 @@ capability resolution.
 - A required `nxc_server_build` bootstrap value. Every deployment records the exact
   Cfx Server build it runs, so a platform regression can be attributed to a specific
   update rather than to whatever changed most recently.
-- 116 tests across 13 suites.
 - A performance budget and a threat model.
 - Migration planning with content checksums, drift detection, and ordering.
 - A configuration schema and runtime holder. Character limit, live character

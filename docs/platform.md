@@ -13,13 +13,24 @@ someone looked and found nothing, and an absent section is not.
 
 ### 1. Enhanced natives and platform APIs used
 
-**One, and it is a guard rather than a behaviour.** `server/10_mariadb_provider.lua` calls `IsDuplicityVersion()` to refuse to load client-side, and speaks to `oxmysql` through exports. Everything in `shared/` is pure Lua and runs under `wasmoon`.
+Confined to four server files. Everything in `shared/` remains pure Lua and runs under `wasmoon`, which is what keeps 128 tests platform-independent.
 
-The database provider is deliberately thin for this reason: it cannot be unit tested, because `oxmysql` exists only in the server runtime, so everything with logic in it stays where it can be.
+| Where | Uses |
+| --- | --- |
+| `server/90_startup.lua` | `IsDuplicityVersion`, `CreateThread`, `Wait`, `GetConvar`, `RegisterCommand`, `TriggerEvent` |
+| `server/40_connection.lua` | `AddEventHandler` for `playerConnecting`, `playerJoining`, `playerDropped`; the `deferrals` object (`defer`, `update`, `done`); `GetNumPlayerIdentifiers`, `GetPlayerIdentifier`, `Player(source).state`, `DropPlayer` |
+| `server/20_migrator.lua` | `GetNumResourceMetadata`, `GetResourceMetadata`, `LoadResourceFile` |
+| `server/10_mariadb_provider.lua` | `exports.oxmysql` |
+
+**Deferrals carry the one timing requirement.** The platform needs a tick between `defer()` and any later deferral call, so there is an explicit `Wait(0)`. Without it the handshake fails in a way that looks like a network problem.
+
+**State bags are written in exactly one place**, `playerJoining`, carrying the session id and stage — not the account id, and no platform identifier. Every bag is client-visible.
 
 ### 2. Deprecated or compatibility-only natives used
 
 **None.**
+
+Specifically no Mumble voice natives: this resource does no voice, and `nxc_voice` targets the Enhanced server-side API rather than the deprecated client-side one (ADR-0017).
 
 ### 3. Game assets, archetypes, metadata, or data files required
 
@@ -31,13 +42,23 @@ The database provider is deliberately thin for this reason: it cannot be unit te
 
 **Routing buckets:** `17_buckets.lua` owns allocation for the whole framework. Bucket 0 is the shared world, 1 through 999 are reserved, and 1000 through 99999 are allocated dynamically. Resources request a bucket and are given an id; they never pick one. These ranges are a framework convention, not a platform limit.
 
-**Networking:** `16_lifecycle.lua` is a stage machine over connection states. It assumes a player connects, may be queued, selects a character, loads, plays, and disconnects. **It assumes nothing about the transport**, which is fortunate rather than foresighted — the deferral and handshake layer in front of it does not exist yet and must be written against Enhanced (R-1620).
+**Networking:** `16_lifecycle.lua` is a stage machine over connection states and assumes nothing about the transport. The deferral and handshake layer in front of it now exists, in `server/40_connection.lua`, written against the Enhanced flow: `defer`, a tick, `update`, then `done` with either success or a reason the player can act on (R-1620).
+
+**Correlation:** an id is issued at the first `playerConnecting` event and carried into the session, so one connection is one traceable story from handshake to disconnect (R-1621).
+
+**Unverified beyond a single connection.** Queueing, deferral timeouts, and interrupted handshakes are PT-10 and have not been tested.
 
 **Voice:** no involvement. Voice is `nxc_voice`, which does not exist yet.
 
 ### 5. Known Enhanced platform limitations
 
-**Unknown, and not yet testable.** Nothing in this resource has been exercised on an Enhanced server, because the development server runs Legacy artifacts (B-10). The unit tests say the logic is correct; they say nothing about the platform, and are not offered as evidence that they do.
+**None found, and the search has barely started.**
+
+As of 2026-08-02 the resource loads, validates its environment, reaches MariaDB, applies its migrations, and registers itself on an Enhanced Cfx Server at build `b106-ea`. That is the startup path and nothing more.
+
+**Not exercised:** more than one concurrent connection, routing bucket transitions, resource restart with players connected, reconnect recovery, or anything under load. The unit tests say the logic is correct; they say nothing about the platform.
+
+One platform behaviour shaped the code and is worth recording: **a resource that throws inside a shared script still reports as `Started`**. There is no error state observable from outside, which is why startup keeps an explicit readiness flag and an `nxc_status` command rather than treating an absence of errors as evidence.
 
 ### 6. Minimum supported Cfx Server build
 

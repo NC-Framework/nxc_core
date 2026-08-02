@@ -137,5 +137,36 @@ function Migrations.pending(planned, applied)
     return Nxc.Result.ok({ pending = pending, appliedAhead = unknown })
 end
 
+--- Split a migration file into individual statements.
+---
+--- oxmysql executes one statement per call, and a migration is a file of them.
+--- This is in the shared module rather than beside the database code because it
+--- is logic, and logic that decides where a schema change is cut apart is worth
+--- testing before it runs against a real database.
+---
+--- **A statement ends at a semicolon followed by end of line.** A semicolon
+--- inside a string literal or a comment would not be followed by one, which is
+--- what makes the rule survive contact with real SQL. It is not a parser, and it
+--- does not need to be: migrations here are written by us, and
+--- MIGRATION_STANDARDS requires one statement per line ending.
+---
+--- Comment-only fragments are dropped. Sending one to the server is harmless and
+--- makes an error message point at a comment, which is a small cruelty.
+---
+---@param sql string
+---@return string[]
+function Migrations.statements(sql)
+    local out = {}
+    for statement in (sql .. '\n'):gmatch('(.-);%s*\n') do
+        -- Strip line comments before deciding whether anything remains, so a
+        -- block of explanation between two statements is not mistaken for one.
+        local bare = statement:gsub('%-%-[^\n]*', '')
+        if bare:match('%S') then
+            out[#out + 1] = (statement:gsub('^%s+', ''):gsub('%s+$', ''))
+        end
+    end
+    return out
+end
+
 NxcCore.Migrations = Migrations
 return Migrations

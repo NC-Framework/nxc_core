@@ -71,6 +71,13 @@ server_scripts {
     'server/*.lua',
 }
 
+-- Migrations are ENUMERATED, not discovered. A resource cannot list its own
+-- directory at runtime, and it should not: a .sql file appearing in a folder
+-- must not silently become a schema change. Adding one is an edit here.
+--
+-- Order is the order they apply in.
+nxc_migration 'migrations/0001_accounts_and_characters.sql'
+
 -- No client block yet: nothing client-side is implemented. It is added when
 -- the client directory gains files.
 
