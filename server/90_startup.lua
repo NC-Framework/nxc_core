@@ -196,14 +196,20 @@ CreateThread(function()
     -- Name ourselves before logging anything. nxc_lib's modules run inside this
     -- resource's own Lua state, so without this every line below claims to come
     -- from nxc_lib.
-    Nxc.Logger.setResource(NxcCore.RESOURCE)
-    Nxc.Logger.setLevel(settings.nxc_log_level)
-    Nxc.Logger.setEnvironment(settings.nxc_environment)
-    Nxc.Logger.info('startup.environment_valid', {
-        environment = settings.nxc_environment,
-        serverBuild = settings.nxc_server_build,
-        startupMode = settings.nxc_startup_mode,
-    })
+    
+    local success, result = pcall(
+        Nxc.Logger.setResource(NxcCore.RESOURCE)
+        Nxc.Logger.setLevel(settings.nxc_log_level)
+        Nxc.Logger.setEnvironment(settings.nxc_environment)
+        Nxc.Logger.info('startup.environment_valid', {
+            environment = settings.nxc_environment,
+            serverBuild = settings.nxc_server_build,
+            startupMode = settings.nxc_startup_mode,
+        })
+    )
+    if not success then
+        return halt('Failed to set the resource name for logging.', result)
+    end
 
     ------------------------------------------------------------------ 2. database
     local reachable, pingErr = NxcCore.MariaDBProvider.ping()
