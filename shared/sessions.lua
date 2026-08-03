@@ -62,10 +62,45 @@ function Sessions.create(opts)
         bucket = opts.bucket or 0,
         correlationId = opts.correlationId or Nxc.Correlation.new(),
         createdAt = Nxc.Time.nowMs(),
+
+        --- Capability grants held by this session.
+        ---
+        --- **NOTHING POPULATES THIS YET.** Capabilities are computed by a pure
+        --- module with no storage and no wiring behind it: employment, ranks,
+        --- and organisation membership are all later phases. The field exists so
+        --- the shape is settled and so a consumer asking about a capability gets
+        --- a definite `false` rather than an error.
+        ---
+        --- Failing closed is the right direction for the gap. A server-side gate
+        --- that refuses everything is visible immediately; one that permits
+        --- everything is not visible at all.
+        capabilityGrants = opts.capabilityGrants or {},
     }
     sessions[opts.source] = session
     accountsBySession[session.id] = opts.source
     return Nxc.Result.ok(session)
+end
+
+--- Replace the capability grants on a session.
+---
+--- Whole-list replacement rather than add and remove, because a grant is
+--- evidence of a relationship — an employment, a rank — and those change as a
+--- set. Merging piecemeal is how a revoked one survives.
+---
+---@param source any
+---@param grants table
+---@return NxcResult
+function Sessions.setCapabilityGrants(source, grants)
+    local session = sessions[source]
+    if not session then
+        return Nxc.Result.err(Nxc.Errors.sessionInvalid())
+    end
+    if type(grants) ~= 'table' then
+        return Nxc.Result.err(Nxc.Errors.validationFailed(
+            { fields = { { field = 'grants', reason = 'must be a list of grant records' } } }))
+    end
+    session.capabilityGrants = grants
+    return Nxc.Result.ok(true)
 end
 
 --- The session for a connection, or nil.

@@ -24,7 +24,7 @@ nxc_legacy_compatibility 'none'
 
 author 'The Nexus Core Framework team'
 description 'The Nexus Core framework spine: lifecycle, identity, sessions, permissions, shared state, and service discovery.'
-version '0.2.2'
+version '0.3.0'
 
 -- EVERY RESOURCE HAS ITS OWN LUA STATE. A global set by nxc_lib is not visible
 -- here; `Nxc` simply does not exist in this resource unless nxc_lib's modules are
@@ -91,6 +91,7 @@ server_scripts {
     'server/connection.lua',
     'server/config_client.lua',
     'server/startup.lua',
+    'server/api.lua',
 }
 
 -- Migrations are ENUMERATED, not discovered. A resource cannot list its own

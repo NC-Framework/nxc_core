@@ -2,6 +2,35 @@
 
 Entries are added only for genuinely user-visible or contract-relevant changes.
 
+## 0.3.0 - 2026-08-03
+
+Contract version 2.
+
+### Added
+
+- An export surface. **nxc_core had none.** It owned sessions, accounts,
+  characters, capabilities and identity, and exported not one of them, so no
+  other resource could ask it anything at all. Every resource has its own Lua
+  state, so `NxcCore.Sessions` is unreachable from outside however public it
+  looks.
+
+  Found while writing nxc_target, whose server-side authority check needs to ask
+  "does this player hold this capability" and had nowhere to ask.
+
+  `isReady`, `session`, `accountFor`, `characterFor`, `hasCapability`, and
+  `capabilities`. Every one takes a connection and resolves from the server's own
+  state; none accepts an account id, character id, or capability list from the
+  caller.
+
+- `session.capabilityGrants`, and `Sessions.setCapabilityGrants`. Capabilities
+  were a pure module with nothing to apply them to: no session carried grants.
+
+  **Nothing populates them yet** — employment, ranks, and organisation membership
+  are later phases. The field exists so the shape is settled and a consumer
+  asking about a capability gets a definite `false` rather than an error. That
+  fails closed, which is the right direction: a gate refusing everything is
+  visible immediately, one permitting everything is not visible at all.
+
 ## 0.2.2 - 2026-08-03
 
 ### Fixed

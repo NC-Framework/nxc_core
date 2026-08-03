@@ -29,6 +29,6 @@ NxcCore.VERSION = (type(GetResourceMetadata) == 'function'
 
 --- Contract version of the framework surface other resources depend on.
 --- Incremented when a framework contract changes incompatibly.
-NxcCore.CONTRACT_VERSION = 1
+NxcCore.CONTRACT_VERSION = 2
 
 return NxcCore
