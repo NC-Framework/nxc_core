@@ -2,6 +2,18 @@
 
 Entries are added only for genuinely user-visible or contract-relevant changes.
 
+## 0.2.2 - 2026-08-03
+
+### Fixed
+
+- `Identifiers` seeded its random source from `os.time`, which does not exist on
+  the FiveM client. Same defect as nxc_lib's, in a second place, found by
+  auditing for the pattern rather than by waiting for it to crash.
+
+### Changed
+
+- Requires nxc_lib v0.4.0.
+
 ## 0.2.1 — 2026-08-03
 
 ### Fixed

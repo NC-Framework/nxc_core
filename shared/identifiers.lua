@@ -27,8 +27,17 @@ local counter = 0
 local function ensureSeeded()
     if seeded then return end
     seeded = true
+    -- `os` does not exist on the FiveM client, so a seed that reaches for it
+    -- crashes there. GetGameTimer is present on both sides; os.time is the
+    -- fallback for a bare Lua runtime such as the test harness.
+    local function seedSource()
+        if type(GetGameTimer) == 'function' then return GetGameTimer() end
+        if type(os) == 'table' and type(os.time) == 'function' then return os.time() end
+        return 0
+    end
+
     local addr = tostring({}):match('0x(%x+)') or '0'
-    math.randomseed((os.time() % 2147483647) ~ (tonumber(addr, 16) or 0))
+    math.randomseed((seedSource() % 2147483647) ~ (tonumber(addr, 16) or 0))
 end
 
 local function encodeTime(ms, length)
