@@ -130,9 +130,28 @@ AddEventHandler('playerJoining', function()
         stage = state.stage,
     }, true)
 
+    -- Read back what was just written.
+    --
+    -- A state bag write returns nothing and fails silently, so "we set it" and
+    -- "it is set" are different claims and only one of them is evidence. This
+    -- costs one read per connection and turns an invisible failure into a log
+    -- line naming the session it happened to.
+    local published = Player(source).state.nxcSession
+    if type(published) ~= 'table' or published.sessionId ~= created.value.id then
+        Nxc.Logger.error('session.statebag_not_published', {
+            correlationId = state.correlationId,
+            sessionId = created.value.id,
+            detail = 'the session state bag did not read back after being set; '
+                  .. 'clients will not see session state',
+        })
+    end
+
     Nxc.Logger.info('session.open', {
         correlationId = state.correlationId,
         sessionId = created.value.id,
+        -- Recorded so the log itself is the evidence for gate check P1-E03,
+        -- rather than a claim made about it afterwards.
+        statebagPublished = type(published) == 'table' and published.sessionId == created.value.id,
     })
 end)
 
@@ -153,10 +172,15 @@ AddEventHandler('playerDropped', function()
     NxcCore.Buckets.removeOccupant(source)
     NxcCore.Sessions.destroy(source)
 
+    -- Same reasoning at the other end: the bag is cleared, and whether it
+    -- cleared is a separate fact from whether we asked.
+    Player(source).state:set('nxcSession', nil, true)
+
     Nxc.Logger.info('session.closed', {
         correlationId = session.correlationId,
         sessionId = plan.sessionId,
         steps = plan.steps,
+        sessionsRemaining = NxcCore.Sessions.count(),
     })
 end)
 
