@@ -202,7 +202,7 @@ CreateThread(function()
     -- v2 is the minimum since Nxc.Persistence and Nxc.Migrations moved into
     -- nxc_lib. nxc_core still exposes NxcCore.Persistence as an alias for its
     -- own consumers, but the modules behind it now live there.
-    local LIB_CONTRACT_MIN, LIB_CONTRACT_MAX = 2, 2
+    local LIB_CONTRACT_MIN, LIB_CONTRACT_MAX = 3, 3
 
     local function versionAdvice(problem, detail)
         return {

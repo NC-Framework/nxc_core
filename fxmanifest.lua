@@ -24,7 +24,7 @@ nxc_legacy_compatibility 'none'
 
 author 'The Nexus Core Framework team'
 description 'The Nexus Core framework spine: lifecycle, identity, sessions, permissions, shared state, and service discovery.'
-version '0.2.0'
+version '0.2.1'
 
 -- EVERY RESOURCE HAS ITS OWN LUA STATE. A global set by nxc_lib is not visible
 -- here; `Nxc` simply does not exist in this resource unless nxc_lib's modules are

@@ -2,6 +2,24 @@
 
 Entries are added only for genuinely user-visible or contract-relevant changes.
 
+## 0.2.1 — 2026-08-03
+
+### Fixed
+
+- `NxcCore.VERSION` is read from the manifest. It was stated twice and drifted:
+  the manifest said 0.2.0 while the startup banner and every log line said
+  0.1.0.
+
+- The configuration registration diagnostic names what actually arrived instead
+  of `reason=unknown`. An unexpected shape is the one case where the shape is
+  the information, and the old message discarded it — on a real server it
+  produced two log lines a tick apart, nxc_config reporting success and nxc_core
+  reporting refusal, with neither saying why.
+
+### Changed
+
+- Requires nxc_lib contract 3, for `Nxc.plain`.
+
 ## Unreleased
 
 Initial foundation: startup lifecycle, identity, sessions, service discovery, and

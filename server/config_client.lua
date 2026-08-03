@@ -41,9 +41,26 @@ function ConfigClient.register()
     end
 
     if type(result) ~= 'table' or result.ok ~= true then
-        local reason = 'unknown'
-        if type(result) == 'table' and result.error then
+        -- The diagnostic says what actually came back.
+        --
+        -- It used to say `reason=unknown` whenever the shape was unexpected,
+        -- which is the one case where the shape IS the information. On a real
+        -- server that produced two log lines a tick apart — nxc_config reporting
+        -- success, nxc_core reporting refusal — and neither said why.
+        local reason
+        if type(result) ~= 'table' then
+            reason = ('the export returned %s, not a table'):format(type(result))
+        elseif result.error then
             reason = tostring(result.error.code or result.error.message)
+        else
+            local keys = {}
+            for key in pairs(result) do keys[#keys + 1] = tostring(key) end
+            table.sort(keys)
+            reason = #keys == 0
+                and 'the export returned an empty table: a frozen Result does not '
+                 .. 'survive marshalling, so nxc_config needs Nxc.plain'
+                or ('the export returned a table without ok, holding: %s')
+                    :format(table.concat(keys, ', '))
         end
         -- Error, not warn. A refused schema means every setting this resource
         -- has is unmanageable, and nothing else will say so.
