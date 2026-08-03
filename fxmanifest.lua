@@ -59,6 +59,8 @@ shared_scripts {
     '@nxc_lib/shared/locale.lua',
     '@nxc_lib/shared/permissions.lua',
     '@nxc_lib/shared/health.lua',
+    '@nxc_lib/shared/persistence.lua',
+    '@nxc_lib/shared/migrations.lua',
     '@nxc_lib/shared/config_schema.lua',
 
     'shared/namespace.lua',
@@ -87,6 +89,7 @@ server_scripts {
     'server/mariadb_provider.lua',
     'server/migrator.lua',
     'server/connection.lua',
+    'server/config_client.lua',
     'server/startup.lua',
 }
 

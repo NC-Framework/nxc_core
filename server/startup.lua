@@ -199,7 +199,10 @@ CreateThread(function()
     -- incremented on INCOMPATIBLE change, so a newer nxc_lib is not
     -- automatically safer — contract 2 would satisfy `>= 1` and then break at
     -- whatever it removed.
-    local LIB_CONTRACT_MIN, LIB_CONTRACT_MAX = 1, 1
+    -- v2 is the minimum since Nxc.Persistence and Nxc.Migrations moved into
+    -- nxc_lib. nxc_core still exposes NxcCore.Persistence as an alias for its
+    -- own consumers, but the modules behind it now live there.
+    local LIB_CONTRACT_MIN, LIB_CONTRACT_MAX = 2, 2
 
     local function versionAdvice(problem, detail)
         return {
