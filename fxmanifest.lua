@@ -96,6 +96,7 @@ server_scripts {
 --
 -- Order is the order they apply in.
 nxc_migration 'migrations/0001_accounts_and_characters.sql'
+nxc_migration 'migrations/0002_drop_ban_columns.sql'
 
 -- No client block yet: nothing client-side is implemented. It is added when
 -- the client directory gains files.

@@ -72,7 +72,7 @@ describe('Lifecycle', () => {
 
   test('connection checks return the first rejection with a reason', async () => {
     const r = await lua.doString(`
-      local base = { hasIdentifier = true, banned = false, whitelisted = true,
+      local base = { hasIdentifier = true, whitelisted = true,
                      whitelistRequired = false, slotsFree = true, bootstrapOk = true }
       local function withF(o)
         local t = {} for k,v in pairs(base) do t[k]=v end
@@ -83,8 +83,6 @@ describe('Lifecycle', () => {
         clean = NxcCore.Lifecycle.evaluateConnection(base).ok,
         noId = NxcCore.Lifecycle.evaluateConnection(
           withF({ hasIdentifier = false })).error.details.rejection,
-        banned = NxcCore.Lifecycle.evaluateConnection(
-          withF({ banned = true })).error.details.rejection,
         notWhite = NxcCore.Lifecycle.evaluateConnection(
           withF({ whitelistRequired = true, whitelisted = false })).error.details.rejection,
         full = NxcCore.Lifecycle.evaluateConnection(
@@ -95,22 +93,25 @@ describe('Lifecycle', () => {
     `);
     assert.equal(r.clean, true);
     assert.equal(r.noId, 'no_identifier');
-    assert.equal(r.banned, 'banned');
     assert.equal(r.notWhite, 'not_whitelisted');
     assert.equal(r.full, 'server_full');
     assert.equal(r.bootstrap, 'bootstrap_failed');
   });
 
-  test('a ban is checked before whitelist, and reports its reason', async () => {
+  test('a ban fact is ignored, because banning is not this framework\'s job', async () => {
     const r = await lua.doString(`
+      -- Passed deliberately. FXServer and txAdmin implement banning, with
+      -- durations, identifier matching, an admin interface and an appeal trail,
+      -- and they reject a banned player before this code runs. A second ban
+      -- system would be a worse one that operators must also learn.
       local out = NxcCore.Lifecycle.evaluateConnection({
-        hasIdentifier = true, banned = true, banReason = 'Banned until 2027 for duplication.',
-        whitelisted = false, whitelistRequired = true, slotsFree = true, bootstrapOk = true,
+        hasIdentifier = true, banned = true, banReason = 'ignored',
+        whitelisted = true, whitelistRequired = true, slotsFree = true, bootstrapOk = true,
       })
-      return { rejection = out.error.details.rejection, message = out.error.message }
+      return { ok = out.ok, hasBannedRejection = NxcCore.Lifecycle.REJECTION.BANNED ~= nil }
     `);
-    assert.equal(r.rejection, 'banned');
-    assert.match(r.message, /duplication/);
+    assert.equal(r.ok, true, 'a stray banned fact must not reject anyone');
+    assert.equal(r.hasBannedRejection, false, 'the rejection reason is gone too, not just unused');
   });
 
   test('reconnect always creates a new session', async () => {

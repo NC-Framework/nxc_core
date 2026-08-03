@@ -133,8 +133,8 @@ function Accounts.resolve(identifiers)
     end
 
     local rows, readErr = unwrap(db.query(
-        'SELECT id, display_name, whitelisted, priority, character_slots, banned_until, '
-     .. 'ban_reason FROM nxc_core_accounts WHERE id = ?', { accountId }))
+        'SELECT id, display_name, whitelisted, priority, character_slots '
+     .. 'FROM nxc_core_accounts WHERE id = ?', { accountId }))
     if readErr then return failed(readErr) end
     if not rows[1] then
         return failed(('account %s resolved but could not be read back'):format(accountId))
@@ -163,6 +163,45 @@ end
 function Accounts.touch(accountId)
     db.execute('UPDATE nxc_core_accounts SET last_seen_at = CURRENT_TIMESTAMP(3) WHERE id = ?',
         { accountId })
+end
+
+--- Whether a value read from the database is absent.
+---
+--- **`x ~= nil` is not enough for a value that came from SQL.** A NULL arrives
+--- through oxmysql as whatever the JS bridge marshals `null` into, and it is not
+--- Lua nil. That difference rejected every connection on a real server: a
+--- nullable column tested with `~= nil` read as present on a row where the
+--- database reported it NULL.
+---
+--- Kept, and tested, even though the column that exposed it is being removed.
+--- Every nullable column read from Lua has the same hazard.
+---
+---@param value any
+---@return boolean
+function Accounts.isAbsent(value)
+    if value == nil then return true end
+    local kind = type(value)
+    -- Any non-scalar is a sentinel of some sort, and none of them is a value.
+    if kind ~= 'string' and kind ~= 'number' and kind ~= 'boolean' then return true end
+    if kind == 'string' then
+        local trimmed = value:gsub('^%s+', ''):gsub('%s+$', '')
+        return trimmed == '' or trimmed:upper() == 'NULL'
+    end
+    return false
+end
+
+--- Whether an account is whitelisted.
+---
+--- The column is TINYINT, so the driver may present 1, "1", or true. Absent
+--- means not whitelisted: a whitelist that fails open is not a whitelist.
+---
+---@param account table
+---@return boolean
+function Accounts.isWhitelisted(account)
+    local value = account and account.whitelisted
+    if Accounts.isAbsent(value) then return false end
+    if type(value) == 'boolean' then return value end
+    return tonumber(value) == 1
 end
 
 NxcCore.Accounts = Accounts

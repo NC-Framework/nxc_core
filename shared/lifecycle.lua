@@ -1,8 +1,13 @@
 --- Connection lifecycle and reconnect recovery.
 ---
 --- A player moves through a defined sequence, and every stage can fail. Each
---- failure has a defined outcome: a player rejected at the ban check gets a
---- clear reason, and a player who disconnects mid-load leaves no partial state.
+--- failure has a defined outcome: a rejected player gets a clear reason, and a
+--- player who disconnects mid-load leaves no partial state.
+---
+--- **Bans are not here.** FXServer and txAdmin already implement banning —
+--- durations, identifier matching, an admin interface, an appeal trail — and a
+--- second ban system would be a worse one that operators must also learn.
+--- Rejecting a banned player happens before this code runs.
 ---
 --- **A reconnecting player gets a NEW session.** Reconnect recovery restores
 --- character state from the database; it does not resurrect the old session. A
@@ -15,7 +20,7 @@ local Lifecycle = {}
 Lifecycle.STAGE = {
     CONNECTING     = 'connecting',
     IDENTIFYING    = 'identifying',
-    CHECKING       = 'checking',       -- ban and whitelist
+    CHECKING       = 'checking',       -- whitelist and capacity
     QUEUED         = 'queued',
     SESSION_OPEN   = 'session_open',
     SELECTING      = 'selecting',      -- character selection
@@ -26,7 +31,6 @@ Lifecycle.STAGE = {
 
 Lifecycle.REJECTION = {
     NO_IDENTIFIER  = 'no_identifier',
-    BANNED         = 'banned',
     NOT_WHITELISTED = 'not_whitelisted',
     SERVER_FULL    = 'server_full',
     BOOTSTRAP_FAILED = 'bootstrap_failed',
@@ -116,10 +120,10 @@ end
 --- Evaluate the connection checks.
 ---
 --- Returns the first rejection, because a rejected player needs one clear
---- reason rather than a list. The order is deliberate: identifier before ban,
---- because a ban check needs an identifier to check against.
+--- reason rather than a list. The order is deliberate: bootstrap before
+--- identifier, because a server that is not ready cannot identify anyone.
 ---
----@param facts { hasIdentifier: boolean, banned: boolean, banReason?: string, whitelisted: boolean, whitelistRequired: boolean, slotsFree: boolean, bootstrapOk: boolean }
+---@param facts { hasIdentifier: boolean, whitelisted: boolean, whitelistRequired: boolean, slotsFree: boolean, bootstrapOk: boolean }
 ---@return NxcResult
 function Lifecycle.evaluateConnection(facts)
     if facts.bootstrapOk == false then
@@ -133,14 +137,6 @@ function Lifecycle.evaluateConnection(facts)
             'NXC_CORE_CONNECTION_REJECTED', 'Your account could not be identified.',
             { resource = NxcCore.RESOURCE,
               details = { rejection = Lifecycle.REJECTION.NO_IDENTIFIER } }))
-    end
-    -- The ban is checked against the ACCOUNT, not the character. A ban that
-    -- only stops one character is not a ban.
-    if facts.banned then
-        return Nxc.Result.err(Nxc.Errors.new(
-            'NXC_CORE_CONNECTION_REJECTED', facts.banReason or 'You are banned from this server.',
-            { resource = NxcCore.RESOURCE,
-              details = { rejection = Lifecycle.REJECTION.BANNED } }))
     end
     if facts.whitelistRequired and not facts.whitelisted then
         return Nxc.Result.err(Nxc.Errors.new(

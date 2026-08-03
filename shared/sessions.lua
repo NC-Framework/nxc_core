@@ -5,8 +5,13 @@
 ---         Session      one play period    ends at disconnect
 ---
 --- **An account holds multiple characters** (R-215). Nearly all gameplay state
---- hangs off a character; bans, priority, and framework permissions hang off the
---- account — a ban that only stops one character is not a ban (R-216, P2-11).
+--- hangs off a character; priority and framework permissions hang off the
+--- account, so a permission granted to a person applies to every persona they
+--- play (R-216).
+---
+--- **Banning is not the framework's.** FXServer and txAdmin handle it, and they
+--- match on platform identifiers rather than on anything here — which means a
+--- ban already stops every character, without this code having an opinion.
 ---
 --- **Every request resolves its actor from the session, never from the payload.**
 --- A request naming a character id is making a claim, not stating a fact. This

@@ -18,7 +18,7 @@ local pending = {}   -- source -> lifecycle state, for the duration of the hands
 --- Reject a connection with a reason the player can act on.
 ---
 --- The message is the one from the structured error, not a generic string. A
---- player told "you are banned until Friday" can plan; one told "connection
+--- player told which requirement they failed can act on it; one told "connection
 --- refused" opens a ticket.
 local function reject(deferrals, err, correlationId)
     Nxc.Logger.info('connection.rejected', {
@@ -77,14 +77,15 @@ AddEventHandler('playerConnecting', function(_, _, deferrals)
 
     NxcCore.Lifecycle.transition(state, NxcCore.Lifecycle.STAGE.CHECKING)
 
-    -- Facts in, decision out. The ordering rules — identifier before ban, ban
-    -- before whitelist — live in the tested module, not here.
+    -- Facts in, decision out. The ordering rules live in the tested module.
+    --
+    -- No ban fact: FXServer and txAdmin reject banned players before this runs.
+    -- Reading whitelisted goes through a helper because a SQL NULL is not Lua
+    -- nil, which is what made every connection look banned.
     local decision = NxcCore.Lifecycle.evaluateConnection({
         bootstrapOk = NxcCore.Startup.isReady(),
         hasIdentifier = true,
-        banned = account.banned_until ~= nil,
-        banReason = account.ban_reason,
-        whitelisted = tonumber(account.whitelisted) == 1,
+        whitelisted = NxcCore.Accounts.isWhitelisted(account),
         whitelistRequired = NxcCore.Config.get('nxc_core.connection.whitelistRequired'),
         slotsFree = true,
     })

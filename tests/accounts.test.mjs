@@ -217,4 +217,57 @@ describe('Account resolution', () => {
     assert.equal(r.ok, false);
     assert.equal(r.code, 'NXC_CORE_CROSS_DOMAIN_QUERY');
   });
+
+  test('a SQL NULL is absent, in every shape a driver might deliver it', async () => {
+    const r = await lua.doString(`
+      local A = NxcCore.Accounts
+      return {
+        nilValue   = A.isAbsent(nil),
+        emptyText  = A.isAbsent(''),
+        spaces     = A.isAbsent('   '),
+        nullText   = A.isAbsent('NULL'),
+        nullLower  = A.isAbsent('null'),
+        sentinel   = A.isAbsent({}),
+        zero       = A.isAbsent(0),
+        falseValue = A.isAbsent(false),
+        text       = A.isAbsent('acc_x'),
+      }
+    `);
+    // The one that rejected every connection on a real server: a nullable column
+    // tested with `~= nil` read as PRESENT on a row the database reported NULL.
+    // Whatever the JS bridge marshals `null` into, it is not Lua nil.
+    assert.equal(r.nilValue, true);
+    assert.equal(r.emptyText, true);
+    assert.equal(r.spaces, true);
+    assert.equal(r.nullText, true);
+    assert.equal(r.nullLower, true);
+    assert.equal(r.sentinel, true, 'a non-scalar is a sentinel, never a value');
+    // Present-but-falsey is present. Zero and false are answers.
+    assert.equal(r.zero, false);
+    assert.equal(r.falseValue, false);
+    assert.equal(r.text, false);
+  });
+
+  test('whitelist reads every representation of one, and fails closed', async () => {
+    const r = await lua.doString(`
+      local A = NxcCore.Accounts
+      return {
+        one      = A.isWhitelisted({ whitelisted = 1 }),
+        oneText  = A.isWhitelisted({ whitelisted = '1' }),
+        boolTrue = A.isWhitelisted({ whitelisted = true }),
+        zero     = A.isWhitelisted({ whitelisted = 0 }),
+        nullText = A.isWhitelisted({ whitelisted = 'NULL' }),
+        missing  = A.isWhitelisted({}),
+        noRow    = A.isWhitelisted(nil),
+      }
+    `);
+    assert.equal(r.one, true);
+    assert.equal(r.oneText, true, 'TINYINT may arrive as a string');
+    assert.equal(r.boolTrue, true);
+    assert.equal(r.zero, false);
+    // A whitelist that fails open is not a whitelist.
+    assert.equal(r.nullText, false);
+    assert.equal(r.missing, false);
+    assert.equal(r.noRow, false);
+  });
 });

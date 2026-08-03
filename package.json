@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
+  "license": "MIT",
+  "author": "Ezekiel Hammond — Nexus Core Framework",
   "description": "The Nexus Core framework spine: lifecycle, identity, sessions, permissions, shared state, and service discovery.",
   "author": "The Nexus Core Framework team",
   "homepage": "https://nxcframework.net",
