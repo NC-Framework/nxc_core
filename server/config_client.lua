@@ -73,6 +73,13 @@ function ConfigClient.register()
 
     registered = true
 
+    -- Health goes from degraded to serviceable HERE, not at the end of startup.
+    -- nxc_config starts third and announces afterwards, so at the moment
+    -- nxc_core finishes starting it is genuinely running on declared defaults.
+    -- Saying otherwise would make the health report agree with the startup order
+    -- rather than with what happened.
+    Nxc.Health.setConfigurationRegistered(true)
+
     -- Apply what is in force. Config.apply validates each value against the
     -- field before accepting it — nxc_config is trusted to deliver values, not
     -- to have validated them, and the owner of a setting is the last line of

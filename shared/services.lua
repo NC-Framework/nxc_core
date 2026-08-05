@@ -146,6 +146,42 @@ function Services.all()
     return out
 end
 
+--- The worst state among a set of health reports.
+---
+--- **THE FRAMEWORK IS AS HEALTHY AS ITS UNHEALTHIEST PART.** One failed resource
+--- means the framework is failed, whatever the other seven say. A summary that
+--- averaged, or that reported the most common state, would read green with
+--- sessions down.
+---
+--- `unknown` ranks ABOVE serviceable and BELOW starting. A resource that did not
+--- answer is not evidence of health, and it is not evidence of failure either —
+--- reporting it as either would be inventing a fact about a resource that said
+--- nothing.
+---
+--- Pure, and separate from the export that uses it, because a ranking inlined in
+--- a closure is a ranking nothing can test.
+---
+---@param reports table[]  each with a `state`
+---@return string
+function Services.worstOf(reports)
+    local RANK = {
+        serviceable = 0,
+        unknown = 1,
+        starting = 2,
+        degraded = 3,
+        failed = 4,
+    }
+
+    local worst = 'serviceable'
+    for _, report in ipairs(reports or {}) do
+        -- An unrecognised state ranks as unknown rather than being ignored.
+        -- Ignoring it would let a resource hide by reporting nonsense.
+        local rank = RANK[report.state] or RANK.unknown
+        if rank > RANK[worst] then worst = RANK[report.state] and report.state or 'unknown' end
+    end
+    return worst
+end
+
 --- Test helper.
 function Services.reset()
     registry = {}

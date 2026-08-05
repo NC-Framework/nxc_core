@@ -63,6 +63,35 @@ Contract version 2.
 
 ## Unreleased
 
+## 0.4.0 — 2026-08-05
+
+### Added
+
+- Service registration and discovery, exported: `registerService`,
+  `setServiceState`, `discover`, `serviceSupports`, `services`. The module was
+  complete and tested since Phase 1 began and reachable by nobody, so no resource
+  could find another.
+- `health` — the framework's, assembled by asking each registered resource for
+  its own. Every FiveM resource has its own Lua state, so there is no central
+  health to read; it has to be collected.
+- `nxc_health` on the console. The gate check is that health CAN BE QUERIED, and
+  an export only another resource can call does not satisfy that: the person who
+  needs the answer is at a console.
+- `Services.worstOf` — the framework is as healthy as its unhealthiest part. Pure
+  and separate from the export, because a ranking inlined in a closure is a
+  ranking nothing can test.
+
+### Changed
+
+- nxc_core registers itself at the START of startup rather than at the end. A
+  core that halted was absent from its own service list, so `nxc_health` reported
+  "nothing registered" — which reads as a broken command at exactly the moment it
+  needs to read as a broken framework.
+- A resource that stops is unregistered centrally, by nxc_core watching
+  `onResourceStop`. A resource that crashes cannot unregister itself, and a stale
+  registration is worse than an absent one.
+
+
 Initial foundation: startup lifecycle, identity, sessions, service discovery, and
 capability resolution.
 

@@ -175,12 +175,34 @@ local function halt(headline, err)
     print('^1')
 
     if Nxc.Health then Nxc.Health.fail(headline) end
+    if NxcCore.Services then
+        NxcCore.Services.setState(NxcCore.RESOURCE, NxcCore.Services.STATE.FAILED)
+    end
 end
 
 CreateThread(function()
     -- oxmysql is a dependency, so it has started; but its connection is
     -- established asynchronously and may not be ready in the same tick.
     Wait(0)
+
+    -- Health tracking begins BEFORE anything can fail, so a resource that dies
+    -- during startup still has something to report. `halt` already calls
+    -- Health.fail; until this line existed it was writing into a state nobody
+    -- had initialised and nobody could read.
+    Nxc.Health.init({ dependencies = { 'oxmysql' } })
+    Nxc.Health.setDependency('oxmysql', GetResourceState('oxmysql') == 'started')
+
+    -- REGISTERED BEFORE ANYTHING CAN FAIL, not after everything succeeded.
+    -- Registration at the end of startup means a core that halts is absent from
+    -- its own service list, and `nxc_health` then reports "nothing registered" —
+    -- which reads as "this command is broken" at exactly the moment somebody
+    -- needs it to read as "the framework is down".
+    NxcCore.Services.register({
+        name = NxcCore.RESOURCE,
+        contractVersion = NxcCore.CONTRACT_VERSION,
+        version = NxcCore.VERSION,
+        capabilities = { 'sessions', 'accounts', 'capabilities', 'buckets', 'persistence' },
+    })
 
     printBanner()
 
@@ -309,12 +331,6 @@ CreateThread(function()
     end
 
     ------------------------------------------------------------------ 4. open
-    NxcCore.Services.register({
-        name = NxcCore.RESOURCE,
-        contractVersion = NxcCore.CONTRACT_VERSION,
-        version = NxcCore.VERSION,
-        capabilities = { 'sessions', 'accounts', 'capabilities', 'buckets', 'persistence' },
-    })
     NxcCore.Services.setState(NxcCore.RESOURCE, NxcCore.Services.STATE.READY)
 
     ready = true

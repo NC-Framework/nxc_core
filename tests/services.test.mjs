@@ -110,3 +110,54 @@ describe('Services', () => {
     assert.equal(r.absent, false);
   });
 });
+
+/**
+ * The framework's health is the worst of its parts.
+ *
+ * This ranking was inline in the `health` export until it was moved here, which
+ * is the only reason any of it is tested: a decision inlined in a closure is a
+ * decision nothing can reach.
+ */
+describe('Summarising health', () => {
+  const worstOf = (states) => lua.doString(`
+    local reports = {}
+    for _, s in ipairs({ ${states.map((s) => `'${s}'`).join(', ')} }) do
+      reports[#reports + 1] = { state = s }
+    end
+    return NxcCore.Services.worstOf(reports)
+  `);
+
+  test('everything serviceable is serviceable', async () => {
+    assert.equal(await worstOf(['serviceable', 'serviceable', 'serviceable']), 'serviceable');
+  });
+
+  test('one failure fails the framework, whatever the rest say', async () => {
+    // THE WHOLE POINT. Sessions being down is not offset by seven resources
+    // that are fine, and a summary that averaged would read green.
+    assert.equal(
+      await worstOf(['serviceable', 'serviceable', 'failed', 'serviceable']), 'failed');
+  });
+
+  test('degraded outranks starting, and starting outranks unknown', async () => {
+    assert.equal(await worstOf(['starting', 'degraded']), 'degraded');
+    assert.equal(await worstOf(['unknown', 'starting']), 'starting');
+  });
+
+  test('a resource that said nothing is worse than one that said it is fine', async () => {
+    // `unknown` is not evidence of health. It is also not evidence of failure,
+    // and reporting it as either would invent a fact about a silent resource.
+    assert.equal(await worstOf(['serviceable', 'unknown']), 'unknown');
+  });
+
+  test('nonsense is treated as unknown rather than ignored', async () => {
+    // Ignoring an unrecognised state would let a resource hide by reporting
+    // something nobody defined.
+    assert.equal(await worstOf(['serviceable', 'excellent']), 'unknown');
+  });
+
+  test('no resources at all is serviceable, not an error', async () => {
+    // An empty framework is a real state on a server where nothing has
+    // registered yet, and the console command says so in words.
+    assert.equal(await worstOf([]), 'serviceable');
+  });
+});
